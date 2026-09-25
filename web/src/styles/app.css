@@ -43,20 +43,8 @@ a { color: inherit; }
 .zl-searchbar input::placeholder { color: var(--text-placeholder); }
 .zl-inline-name { border: 0; outline: none; background: var(--surface-input); border-radius: var(--radius-sm); padding: 2px 6px; font: inherit; font-weight: 500; color: var(--text); width: 220px; }
 
-/* A narrow list (e.g. next to an open thread) shows subject + date only, as in the reference. Driven by the list's
-   own width, so it changes once at a natural point while the side tab animates, never mid-way through a class swap. */
-.zl-listpane { container: list / inline-size; }
-@media (min-width: 768px) {
-  @container list (max-width: 720px) {
-    .zl-row { grid-template-columns: 20px 8px minmax(0, 1fr) auto; }
-    .zl-row .zl-row-from, .zl-row .zl-row-meta { display: none; }
-    .zl-row .zl-row-time { grid-column: 4; }
-    .zl-row .zl-row-actions { display: none; }
-    .zl-row:hover .zl-row-actions { display: flex; grid-column: 4; }
-    .zl-group { padding-left: 36px; }
-    .zl-viewbar .zl-btn--secondary { display: none; }
-  }
-}
+/* A narrow list (e.g. next to an open thread) keeps every column, as in the reference: the preview and then the
+   subject truncate and the sender column shrinks, continuously, so nothing pops in or out while the tab animates. */
 
 /* Thread view */
 .zl-peek { min-height: 0; }
@@ -264,3 +252,19 @@ a { color: inherit; }
 .zl-search-recent .zl-icon { color: var(--text-subtle); flex: none; }
 .zl-search-hint { padding: var(--space-2) var(--space-2) var(--space-1); font-size: var(--text-xs); color: var(--text-subtle); border-top: 1px solid var(--border); margin-top: var(--space-1); }
 .zl-search-hint code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.95em; color: var(--text-muted); }
+
+/* ---------- List columns: aligned at every width ----------
+   The sender column is sized from the list's own width (container units), so it is identical on every row and
+   shrinks smoothly as a side tab opens. Label chips keep their full text; the subject + preview give way first. */
+.zl-listpane { container-type: inline-size; }
+.zl-row { grid-template-columns: 20px 8px clamp(80px, 20cqi, 200px) minmax(96px, 1fr) minmax(0, max-content) minmax(64px, auto); }
+/* Chips that don't fit wrap onto a hidden second line, so they disappear whole instead of being sliced; only the
+   first chip may shorten (with an ellipsis). */
+.zl-row-meta { max-width: 36cqi; height: var(--size-chip-height); flex-wrap: wrap; overflow: hidden; row-gap: 8px; }
+.zl-row-meta .zl-tag { flex-shrink: 0; }
+.zl-row-meta .zl-tag:first-of-type { flex-shrink: 1; min-width: 0; max-width: min(132px, 22cqi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zl-row-meta > .zl-icon { flex-shrink: 0; align-self: center; }
+@container (max-width: 700px) {
+  /* Narrow list: first label only, as in the reference (keeps the subject readable). */
+  .zl-row-meta .zl-tag:not(:first-of-type), .zl-row-meta .zl-tag-more { display: none; }
+}
