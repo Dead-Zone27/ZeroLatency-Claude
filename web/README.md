@@ -53,7 +53,7 @@ Production (`next build` + `next start`, Vercel) never uses these shortcuts: unt
 
 ### 2. OpenAI
 
-Put an API key in `OPENAI_API_KEY`, in `.env.local` locally or in your host's environment variables. Never commit it. `OPENAI_MODEL` defaults to `gpt-5-mini`. Any chat model that supports structured outputs works.
+Put an API key in `OPENAI_API_KEY`, in `.env.local` locally or in your host's environment variables. Never commit it. `OPENAI_MODEL` defaults to `gpt-5-mini`. Any chat model that supports structured outputs works. Reasoning models get `reasoning_effort: low` by default (override with `OPENAI_REASONING_EFFORT`); if a model rejects the parameter, the call is retried without it.
 
 ### 3. Session secret
 
@@ -65,7 +65,15 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 ## Deploy (Vercel)
 
-Import the repository, set **Root Directory** to `web`, and add the environment variables from `.env.example` (with `APP_URL=https://<your-domain>`). Add the production redirect URI to the Google OAuth client.
+1. On [vercel.com/new](https://vercel.com/new), import the GitHub repository.
+2. **Root Directory:** `web`. Framework preset: Next.js (detected). Leave the build settings at their defaults.
+3. **Environment Variables** (Production, and Preview if you use it): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL` (optional) and `APP_URL=https://<your-domain>`. Do not set `ZL_DEMO`.
+4. Deploy. Then add `https://<your-domain>/api/auth/callback` as an authorised redirect URI on the Google OAuth client, and `https://<your-domain>` as an authorised JavaScript origin.
+5. To deploy a branch other than `main` as production: **Project → Settings → Environments → Production → Branch Tracking**.
+
+Changing an environment variable only takes effect after a redeploy (**Deployments → ⋯ → Redeploy**).
+
+Sign-in always runs on `APP_URL`: opening a `*.vercel.app` deployment URL sends you there first, so only one redirect URI is needed. AI routes are allowed up to 120 seconds (`maxDuration`).
 
 Vercel limits request bodies to 4.5 MB, so larger attachments fail there. Self-host (`npm run build && npm start`) to send attachments up to Gmail's 25 MB limit.
 
@@ -78,7 +86,7 @@ npm run build
 
 ## Security notes
 
-- Google tokens are stored only in an encrypted, `HttpOnly`, `SameSite=Lax` cookie (AES-256-GCM, keyed by `SESSION_SECRET`). There is no database.
+- Google tokens are stored only in an encrypted, `HttpOnly`, `SameSite=Lax` cookie (AES-256-GCM, keyed by `SESSION_SECRET`), split into chunks under the 4 KB browser limit. There is no database.
 - State-changing API routes reject cross-site requests (Origin check), and every request body is validated with zod.
 - HTML email renders in a sandboxed iframe with no scripts, forms or same-window navigation, and a restrictive CSP.
 - Attachments other than images and PDFs are always served as downloads, under a `sandbox` CSP.

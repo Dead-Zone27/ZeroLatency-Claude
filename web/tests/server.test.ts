@@ -5,7 +5,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { seal, unseal } from '@/lib/server/crypto';
 import { ConfigError, configProblems, env, resetEnvCache } from '@/lib/server/env';
-import { AIError, chatJson } from '@/lib/server/openai';
+import { AIError, chatJson, reasoningEffortFor } from '@/lib/server/openai';
 import { summarize, mapLimit } from '@/lib/server/gmail';
 
 describe('cookie sealing', () => {
@@ -60,6 +60,29 @@ describe('chatJson', () => {
 
     const unauth = vi.fn(async () => ok({ error: { message: 'bad key' } }, 401));
     await expect(chatJson({ messages: [], schemaName: 's', jsonSchema: schema, validator: z.object({ body: z.string() }), fetchImpl: unauth as unknown as typeof fetch })).rejects.toThrow(/OPENAI_API_KEY/);
+  });
+
+  it('sends reasoning_effort only to reasoning models, and drops it if the model rejects it', async () => {
+    expect(reasoningEffortFor('gpt-5-mini')).toBe('low');
+    expect(reasoningEffortFor('o4-mini', 'medium')).toBe('medium');
+    expect(reasoningEffortFor('gpt-5-mini', 'off')).toBeNull();
+    expect(reasoningEffortFor('gpt-4.1-mini')).toBeNull();
+    expect(reasoningEffortFor('gpt-5-chat-latest')).toBeNull();
+
+    process.env.OPENAI_MODEL = 'gpt-5-mini';
+    resetEnvCache();
+    const sent: Record<string, unknown>[] = [];
+    const picky = vi.fn(async (_u: string | URL | Request, init?: RequestInit) => {
+      const req = JSON.parse(String(init?.body));
+      sent.push(req);
+      return 'reasoning_effort' in req
+        ? ok({ error: { message: "Unsupported value: 'reasoning_effort' does not support 'low' with this model." } }, 400)
+        : ok({ choices: [{ message: { content: '{"body":"ok"}' } }] });
+    });
+    await expect(chatJson({ messages: [], schemaName: 's', jsonSchema: schema, validator: z.object({ body: z.string() }), fetchImpl: picky as unknown as typeof fetch })).resolves.toEqual({ body: 'ok' });
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toHaveProperty('reasoning_effort', 'low');
+    expect(sent[1]).not.toHaveProperty('reasoning_effort');
   });
 
   it('rejects output that does not match the schema', async () => {

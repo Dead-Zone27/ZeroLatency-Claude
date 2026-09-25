@@ -46,7 +46,7 @@ const contactsCache = new Lru<{ at: number; list: Address[] }>(50);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-interface GmailErrorBody { error?: { message?: string; status?: string; code?: number } }
+interface GmailErrorBody { error?: { message?: string; status?: string; code?: number; errors?: { reason?: string; message?: string }[] } }
 
 export function summarize(thread: { id: string; historyId?: string; messages?: GmailMessage[] }, extras: { attachment: Set<string>; calendar: Set<string> }): ThreadSummary {
   const msgs = thread.messages ?? [];
@@ -124,19 +124,25 @@ export class GmailProvider implements MailProvider {
       await this.token(true);
       return this.req<T>(url, init, attempt, true);
     }
-    if ((res.status === 429 || res.status >= 500 || (res.status === 403 && /rate/i.test(res.statusText))) && attempt < 3) {
-      await sleep(400 * 2 ** attempt + Math.random() * 250);
+    if (res.ok) {
+      if (res.status === 204) return undefined as T;
+      const text = await res.text();
+      return (text ? JSON.parse(text) : undefined) as T;
+    }
+    const body = (await res.json().catch(() => ({}))) as GmailErrorBody;
+    // Gmail signals per-user quota as 403 with reason rateLimitExceeded / userRateLimitExceeded (HTTP/2 has no statusText).
+    const rateLimited = res.status === 403 && ((body.error?.errors ?? []).some((x) => /rateLimit/i.test(x.reason ?? '')) || /rate limit/i.test(body.error?.message ?? ''));
+    if ((res.status === 429 || res.status >= 500 || rateLimited) && attempt < 3) {
+      const retryAfter = Number(res.headers.get('retry-after'));
+      await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 10) * 1000 : 400 * 2 ** attempt + Math.random() * 250);
       return this.req<T>(url, init, attempt + 1, refreshed);
     }
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as GmailErrorBody;
-      const msg = body.error?.message || `Google API error ${res.status}`;
-      if (res.status === 403 && /insufficient/i.test(msg)) throw new ProviderError('ZeroLatency is missing a Google permission for this action. Sign in again and allow all requested access.', 403, 'scope');
-      throw new ProviderError(msg, res.status);
+    const msg = body.error?.message || `Google API error ${res.status}`;
+    if (res.status === 403 && /has not been used|is disabled|accessNotConfigured/i.test(msg + JSON.stringify(body.error?.errors ?? []))) {
+      throw new ProviderError('The Gmail or Calendar API is not enabled in the Google Cloud project behind GOOGLE_CLIENT_ID. Enable it under APIs & Services → Library.', 403, 'api_disabled');
     }
-    if (res.status === 204) return undefined as T;
-    const text = await res.text();
-    return (text ? JSON.parse(text) : undefined) as T;
+    if (res.status === 403 && /insufficient/i.test(msg)) throw new ProviderError('ZeroLatency is missing a Google permission for this action. Sign in again and allow all requested access.', 403, 'scope');
+    throw new ProviderError(msg, res.status);
   }
 
   private get<T>(path: string, params?: Record<string, string | string[] | number | undefined>): Promise<T> {

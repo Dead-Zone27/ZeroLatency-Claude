@@ -24,3 +24,6 @@ export async function POST(req: Request) {
     return { body: await writeWithAI({ prompt: b.prompt, draft: b.draft, subject: b.subject, to: b.to, threadContext: context, me, samples }) };
   });
 }
+
+// AI calls can take a while on reasoning models; allow up to two minutes on Vercel.
+export const maxDuration = 120;

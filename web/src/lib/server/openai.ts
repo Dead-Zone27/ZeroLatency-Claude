@@ -21,6 +21,19 @@ interface ChatResponse {
 }
 
 /**
+ * Reasoning models (gpt-5 family, o-series) spend part of max_completion_tokens thinking. For short email tasks a
+ * low effort keeps answers fast and stops long threads from being cut off. OPENAI_REASONING_EFFORT overrides it
+ * ("none" | "minimal" | "low" | "medium" | "high"); set it to "off" to never send the parameter.
+ */
+export function reasoningEffortFor(model: string, override?: string | null): string | null {
+  const o = override?.trim().toLowerCase();
+  if (o === 'off') return null;
+  const reasoning = /^(gpt-5|o\d)/i.test(model) && !/-chat/i.test(model);
+  if (!reasoning) return null;
+  return o || 'low';
+}
+
+/**
  * Calls Chat Completions with a strict JSON schema and validates the result with zod.
  * Uses only parameters that every current chat model accepts (no temperature / max_tokens),
  * so OPENAI_MODEL can point at a reasoning or non-reasoning model.
@@ -36,6 +49,7 @@ export async function chatJson<T>(opts: {
   const { openaiApiKey, openaiModel } = env();
   if (!openaiApiKey) throw new AIError('AI is not configured: set OPENAI_API_KEY on the server.', 503);
   const doFetch = opts.fetchImpl ?? fetch;
+  let effort = reasoningEffortFor(openaiModel, process.env.OPENAI_REASONING_EFFORT);
   let lastErr: AIError | null = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     let res: Response;
@@ -48,6 +62,7 @@ export async function chatJson<T>(opts: {
           messages: opts.messages,
           response_format: { type: 'json_schema', json_schema: { name: opts.schemaName, strict: true, schema: opts.jsonSchema } },
           max_completion_tokens: opts.maxTokens ?? 4000,
+          ...(effort ? { reasoning_effort: effort } : {}),
         }),
         signal: AbortSignal.timeout(90_000),
         cache: 'no-store',
@@ -61,6 +76,12 @@ export async function chatJson<T>(opts: {
       lastErr = new AIError(body.error?.message ?? `OpenAI is busy (${res.status}). Try again.`, res.status === 429 ? 429 : 502);
       if (body.error?.code === 'insufficient_quota') break;
       await new Promise((r) => setTimeout(r, 600 * 2 ** attempt));
+      continue;
+    }
+    if (res.status === 400 && effort && /reasoning_effort/i.test(body.error?.message ?? '')) {
+      // The configured model does not take this parameter (or this value): retry once without it.
+      effort = null;
+      attempt--;
       continue;
     }
     if (!res.ok) {

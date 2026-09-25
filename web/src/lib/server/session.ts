@@ -41,8 +41,23 @@ function secureCookies(): boolean {
   return process.env.NODE_ENV === 'production';
 }
 
+// Browsers drop cookies over 4096 bytes, and four accounts' tokens exceed that, so the sealed session is split
+// across zl_session, zl_session.1, zl_session.2 … Each chunk stays well under the limit.
+const CHUNK = 3800;
+const MAX_CHUNKS = 6;
+
+function chunkName(i: number): string {
+  return i === 0 ? SESSION_COOKIE : `${SESSION_COOKIE}.${i}`;
+}
+
 export async function readSession(): Promise<Session> {
-  const raw = (await cookies()).get(SESSION_COOKIE)?.value;
+  const jar = await cookies();
+  let raw = '';
+  for (let i = 0; i < MAX_CHUNKS; i++) {
+    const part = jar.get(chunkName(i))?.value;
+    if (!part) break;
+    raw += part;
+  }
   const s = raw ? unseal<Session>(raw, env().sessionSecret) : null;
   if (!s || s.v !== 1 || !Array.isArray(s.accounts)) return { v: 1, accounts: [], activeId: null };
   return s;
@@ -50,11 +65,13 @@ export async function readSession(): Promise<Session> {
 
 export async function writeSession(s: Session): Promise<void> {
   const jar = await cookies();
-  if (s.accounts.length === 0) {
-    jar.delete(SESSION_COOKIE);
-    return;
-  }
-  jar.set(SESSION_COOKIE, seal(s, env().sessionSecret), { httpOnly: true, secure: secureCookies(), sameSite: 'lax', path: '/', maxAge: THIRTY_DAYS });
+  const sealed = s.accounts.length ? seal(s, env().sessionSecret) : '';
+  const parts: string[] = [];
+  for (let i = 0; i < sealed.length; i += CHUNK) parts.push(sealed.slice(i, i + CHUNK));
+  if (parts.length > MAX_CHUNKS) throw new Error('Session is too large to store in cookies.');
+  const opts = { httpOnly: true, secure: secureCookies(), sameSite: 'lax' as const, path: '/', maxAge: THIRTY_DAYS };
+  parts.forEach((p, i) => jar.set(chunkName(i), p, opts));
+  for (let i = parts.length; i < MAX_CHUNKS; i++) if (jar.get(chunkName(i))) jar.delete(chunkName(i));
 }
 
 export async function writeOAuthPending(p: OAuthPending): Promise<void> {
