@@ -16,3 +16,6 @@ export async function POST(req: Request) {
     return { cards: cards.map((c) => ({ ...c, historyId: history[c.threadId] ?? '' })) };
   });
 }
+
+// AI calls can take a while on reasoning models; allow up to two minutes on Vercel.
+export const maxDuration = 120;

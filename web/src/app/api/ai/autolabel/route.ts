@@ -34,3 +34,6 @@ export async function POST(req: Request) {
     return { assignments: Object.fromEntries(result), processed: threads.map((t) => t.id) };
   });
 }
+
+// AI calls can take a while on reasoning models; allow up to two minutes on Vercel.
+export const maxDuration = 120;

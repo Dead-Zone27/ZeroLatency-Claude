@@ -11,3 +11,6 @@ export async function POST(req: Request) {
     return await suggestAutoLabel(thread);
   });
 }
+
+// AI calls can take a while on reasoning models; allow up to two minutes on Vercel.
+export const maxDuration = 120;
