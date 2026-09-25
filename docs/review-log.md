@@ -20,3 +20,9 @@ Failed:
 - 21 previews (14 components and 7 patterns). The Lead rendered Button, InboxRow, Hero and Pricing in both themes with the DS CSS injected, and all look correct. The previews are unstyled standalone because the artifact injects their CSS at runtime. That's expected, and it's noted for the builder.
 - The only mentions of Notion are "don't use" rules. The mark is original (a zero with an exiting stroke).
 - Note: the builder must self-host Instrument Sans and IBM Plex Mono via @fontsource.
+
+## Phase 2 / Design System v2 (rebuilt from app frames) / Round 1 → PASS
+- The user asked for the DS to be re-created from the 200 uploaded app frames. All frames were reviewed on contact sheets, and the key ones were measured with a sampling script (`design-system/frame-audit.md`).
+- `build-tokens.mjs` exits 0: 106 text and UI pairs pass AA in both themes. The exempt source values are listed.
+- 27 components, 9 patterns and a cover were rendered in both themes with Playwright and inspected.
+- The artifact was updated in place (version 4). The Badge, InboxRow and Modal cards and the v1 font files were removed. Logos were recoloured and re-uploaded.

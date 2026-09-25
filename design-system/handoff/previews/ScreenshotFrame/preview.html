@@ -1,73 +1,83 @@
-<!-- @dsCard group="Patterns" height=520 width=1180 -->
+<!-- @dsCard group="Patterns" height=600 width=1240 -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>ScreenshotFrame — ZeroLatency DS</title>
 <style>html,body{margin:0}body{background:var(--bg);color:var(--text)}</style></head>
 <body class="zl" style="padding:0">
-<div style="height:460px">
-<div class="zl-frame" role="img" aria-label="ZeroLatency app mockup: the Needs you view with four threads and the agent activity panel">
-  <div class="zl-frame-bar"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M13.5 9.5A7 7 0 1 0 20.5 16.5M13.5 9.5H24.5" fill="none" stroke="var(--accent-fg)" stroke-width="3.25" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ZeroLatency — Needs you</span><span class="zl-kbd">⌘K</span></div>
-  <div class="zl-frame-body">
-    <nav class="zl-frame-side" aria-label="Views">
-      <div class="zl-input-wrap" style="margin:0 4px 8px"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input class="zl-input" style="height:30px" placeholder="Search" aria-label="Search"></div>
-      <h5>Views</h5>
-      <div class="zl-view" aria-current="true"><i></i>Needs you<b>4</b></div>
-      <div class="zl-view"><i></i>Drafted for you<b>12</b></div>
-      <div class="zl-view"><i></i>Waiting on others<b>7</b></div>
-      <div class="zl-view"><i></i>Scheduled<b>3</b></div>
-      <div class="zl-view"><i></i>FYI<b>38</b></div>
-      <h5>Handled today</h5>
-      <div class="zl-view"><i></i>Archived<b>61</b></div>
-      <div class="zl-view"><i></i>Sent by agent<b>9</b></div>
-    </nav>
-    <div class="zl-frame-main">
-      <div class="zl-frame-head"><h4>Needs you</h4><span class="zl-badge">4 of 132 today</span></div>
-      <ul class="zl-list" role="listbox" aria-label="Threads">
-        
-<li class="zl-row zl-row--unread" tabindex="0" role="option" aria-selected="true">
+<div style="padding:24px;background:var(--bg-sidebar)"><div class="zl-frame" style="height:540px" role="img" aria-label="ZeroLatency app: the Needs you view with five threads"><div class="zl-frame-bar"><i></i><i></i><i></i></div>
+<div class="zl-app" style="height:100%">
+  
+<nav class="zl-sidebar" aria-label="Mailbox">
+  <div class="zl-account"><span class="zl-avatar">A</span><span class="zl-account-id"><strong>Alex Morgan</strong><small>alex@northwind.io</small></span><button class="zl-btn zl-btn--icon zl-btn--sm" aria-label="Switch account"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="New message"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/><path d="M17.5 4.5l2 2L12 14l-2.8.8.8-2.8z"/></svg></button></div>
+  <a class="zl-nav-item" href="#"><svg class="zl-icon zl-icon--lg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/></svg><span>Search</span></a>
+  <div class="zl-nav-section"><span class="zl-section-label">Views</span><button class="zl-btn zl-btn--icon zl-btn--sm" aria-label="New view"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+  <a class="zl-nav-item" href="#"><svg class="zl-glyph zl-ink-red " viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12l3 8.5V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6.5zm-.6 8.5h4.3l1 2h2.6l1-2h4.3L16.6 6H7.4z"/></svg><span>Inbox</span><span class="zl-nav-count">4</span></a>
+  <a class="zl-nav-item" href="#" aria-current="page"><svg class="zl-glyph zl-ink-orange " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm-1.3 5 .4 7h1.8l.4-7zm1.3 8.7a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z"/></svg><span>Needs you</span><span class="zl-nav-count">3</span></a>
+  <a class="zl-nav-item" href="#"><svg class="zl-glyph zl-ink-yellow " viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.8z"/></svg><span>Drafted for you</span><span class="zl-nav-count">12</span></a>
+  <a class="zl-nav-item" href="#"><svg class="zl-glyph zl-ink-green " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.6V4a1 1 0 0 1 1-1h7.6l9.7 9.7a1 1 0 0 1 0 1.4l-7.2 7.2a1 1 0 0 1-1.4 0zM7.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg><span>Labels</span><span class="zl-nav-count">2</span></a>
+  
+  <a class="zl-nav-item" href="#"><svg class="zl-icon zl-icon--lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14l5-5 5 5"/></svg><span>Less</span></a>
+  <div class="zl-nav-section"><span class="zl-section-label">Mail</span></div>
+  <a class="zl-nav-item" href="#"><svg class="zl-icon zl-icon--lg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/></svg><span>All mail</span></a><a class="zl-nav-item" href="#"><svg class="zl-icon zl-icon--lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4 10 14M20 4l-6 16-4-6-6-4z"/></svg><span>Sent</span></a><a class="zl-nav-item" href="#"><svg class="zl-icon zl-icon--lg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M9 15l1-3 4.5-4.5 2 2L12 14z"/></svg><span>Drafts</span><span class="zl-nav-count">2</span></a>
+  <div class="zl-sidebar-foot"><button class="zl-btn zl-btn--icon " aria-label="Settings"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M6 18l1.4-1.4M16.6 7.4 18 6"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Calendar"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="2"/><path d="M4 10h16M8.5 3.5v3M15.5 3.5v3"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Help"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9.8 9.6a2.3 2.3 0 0 1 4.4.8c0 1.6-2.2 2-2.2 3.4M12 16.5v.01"/></svg></button></div>
+</nav>
+  <main class="zl-app-main">
+<header class="zl-viewbar">
+  <label class="zl-check "><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span class="zl-visually-hidden">Select</span></label>
+  <h1 class="zl-viewbar-title" style="font-size:inherit;margin:0"><svg class="zl-glyph zl-ink-orange " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm-1.3 5 .4 7h1.8l.4-7zm1.3 8.7a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z"/></svg><span>Needs you</span></h1>
+  <div class="zl-viewbar-tools">
+    <button class="zl-btn zl-btn--secondary"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 15 9M14 5v2M18 9h2M17 6l1.5-1.5M18.5 13.5 17 12M10 6 8.5 4.5"/></svg>Auto label</button>
+    <button class="zl-btn zl-btn--icon is-on" aria-pressed="true" aria-label="Filter"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Group by"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="2.4"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Edit view"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M6 18l1.4-1.4M16.6 7.4 18 6"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Refresh"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.1-5"/><path d="M19 4.5V8h-3.5"/></svg></button>
+  </div>
+</header>
+<ul class="zl-list" role="listbox" aria-label="Threads">
+  
+<li class="zl-row zl-row--unread " tabindex="0" role="option" aria-selected="false">
+  <label class="zl-check "><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span class="zl-visually-hidden">Select</span></label>
   <span class="zl-row-dot" aria-hidden="true"></span>
-  <span class="zl-row-from">Priya Raman</span>
-  <span class="zl-row-subject">Term sheet redlines <span class="zl-row-snippet">· Two open points on the option pool</span></span>
-  <span class="zl-row-meta"><span class="zl-badge zl-badge--ai"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6.5A5.5 5.5 0 1 0 16.5 12"/><path d="M11 6.5h8"/></svg>Decision</span></span>
-  <span class="zl-row-time">9:41</span>
-  <span class="zl-row-actions"><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Archive"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M3 4h18v3H3zM10 11h4"/></svg></button><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Snooze"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></button></span>
+  <span class="zl-row-from">Priya Raman<span class="zl-row-count">3</span></span>
+  <span class="zl-row-subject">Term sheet redlines</span>
+  <span class="zl-row-meta"><span class="zl-tag zl-tag--blue"><span>Action required</span></span></span>
+  <span class="zl-row-time">8:38 AM</span><span class="zl-row-actions"><button class="zl-btn zl-btn--icon " aria-label="Archive"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="4" rx="1"/><path d="M5.5 9v9a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9M10 13h4"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Trash"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Mark as read"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Remind me"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M12 8v4l2.5 1.5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Label"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5V5a1 1 0 0 1 1-1h7.5L20 11.5 12.5 19z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg></button></span>
 </li>
-        
-<li class="zl-row zl-row--unread" tabindex="0" role="option" aria-selected="false">
-  <span class="zl-row-dot" aria-hidden="true"></span>
-  <span class="zl-row-from">Ops Weekly<span class="zl-row-count">3</span></span>
-  <span class="zl-row-subject">Vendor renewal due Friday</span>
-  <span class="zl-row-meta"><span class="zl-badge zl-badge--ai"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6.5A5.5 5.5 0 1 0 16.5 12"/><path d="M11 6.5h8"/></svg>Approve</span></span>
-  <span class="zl-row-time">9:12</span>
-  <span class="zl-row-actions"><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Archive"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M3 4h18v3H3zM10 11h4"/></svg></button><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Snooze"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></button></span>
-</li>
-        
-<li class="zl-row zl-row--unread" tabindex="0" role="option" aria-selected="false">
+  
+<li class="zl-row zl-row--unread is-hover" tabindex="0" role="option" aria-selected="false">
+  <label class="zl-check "><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span class="zl-visually-hidden">Select</span></label>
   <span class="zl-row-dot" aria-hidden="true"></span>
   <span class="zl-row-from">Jonas Beck</span>
   <span class="zl-row-subject">Can we move Thursday?</span>
-  <span class="zl-row-meta"><span class="zl-badge zl-badge--ai"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6.5A5.5 5.5 0 1 0 16.5 12"/><path d="M11 6.5h8"/></svg>Draft ready</span></span>
-  <span class="zl-row-time">8:50</span>
-  <span class="zl-row-actions"><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Archive"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M3 4h18v3H3zM10 11h4"/></svg></button><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Snooze"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></button></span>
+  <span class="zl-row-meta"><span class="zl-tag zl-tag--blue"><span>Action required</span></span></span>
+  <span class="zl-row-time">8:24 AM</span><span class="zl-row-actions"><button class="zl-btn zl-btn--icon " aria-label="Archive"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="4" rx="1"/><path d="M5.5 9v9a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9M10 13h4"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Trash"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Mark as read"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Remind me"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M12 8v4l2.5 1.5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Label"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5V5a1 1 0 0 1 1-1h7.5L20 11.5 12.5 19z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg></button></span>
 </li>
-        
+  
 <li class="zl-row " tabindex="0" role="option" aria-selected="false">
+  <label class="zl-check "><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span class="zl-visually-hidden">Select</span></label>
   <span class="zl-row-dot" aria-hidden="true"></span>
-  <span class="zl-row-from">Legal</span>
-  <span class="zl-row-subject">DPA signed copy</span>
-  <span class="zl-row-meta"><span class="zl-badge zl-badge--success">Filed</span></span>
-  <span class="zl-row-time">Mon</span>
-  <span class="zl-row-actions"><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Archive"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M3 4h18v3H3zM10 11h4"/></svg></button><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Snooze"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></button></span>
+  <span class="zl-row-from">Ops Weekly</span>
+  <span class="zl-row-subject">Vendor renewal due Friday</span>
+  <span class="zl-row-meta"><span class="zl-tag zl-tag--blue"><span>Action required</span></span><span class="zl-tag zl-tag--yellow"><span>Finance</span></span></span>
+  <span class="zl-row-time">8:22 AM</span><span class="zl-row-actions"><button class="zl-btn zl-btn--icon " aria-label="Archive"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="4" rx="1"/><path d="M5.5 9v9a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9M10 13h4"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Trash"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Mark as read"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Remind me"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M12 8v4l2.5 1.5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Label"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5V5a1 1 0 0 1 1-1h7.5L20 11.5 12.5 19z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg></button></span>
 </li>
-      </ul>
-    </div>
-    <aside class="zl-frame-agent" aria-label="Agent activity">
-      <h5>Agent activity</h5>
-      <div class="zl-activity"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M3 4h18v3H3zM10 11h4"/></svg><div>Archived 18 newsletters and receipts<time>09:02</time></div></div>
-      <div class="zl-activity"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><div>Offered 3 slots to Jonas Beck<time>08:51</time></div></div>
-      <div class="zl-draft"><strong>Draft ready</strong><p>“Thursday works if we start at 2. I’ll send a new invite.”</p><button class="zl-btn zl-btn--primary zl-btn--sm">Review &amp; send</button></div>
-    </aside>
-  </div>
-</div></div>
+  <li class="zl-group" role="presentation">Yesterday</li>
+  
+<li class="zl-row " tabindex="0" role="option" aria-selected="false">
+  <label class="zl-check "><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span class="zl-visually-hidden">Select</span></label>
+  <span class="zl-row-dot" aria-hidden="true"></span>
+  <span class="zl-row-from">Mina Okafor</span>
+  <span class="zl-row-subject">Offsite venue shortlist</span>
+  <span class="zl-row-meta"><span class="zl-tag zl-tag--purple"><span>Travel</span></span><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 8.5 10 15a2 2 0 0 1-2.8-2.8L14 5.4a3.5 3.5 0 0 1 5 5L12 17.5a5 5 0 0 1-7-7L11.5 4"/></svg></span>
+  <span class="zl-row-time">Apr 5</span><span class="zl-row-actions"><button class="zl-btn zl-btn--icon " aria-label="Archive"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="4" rx="1"/><path d="M5.5 9v9a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9M10 13h4"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Trash"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Mark as read"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Remind me"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M12 8v4l2.5 1.5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Label"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5V5a1 1 0 0 1 1-1h7.5L20 11.5 12.5 19z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg></button></span>
+</li>
+  
+<li class="zl-row " tabindex="0" role="option" aria-selected="false">
+  <label class="zl-check "><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span class="zl-visually-hidden">Select</span></label>
+  <span class="zl-row-dot" aria-hidden="true"></span>
+  <span class="zl-row-from">billing@cloudnest.dev</span>
+  <span class="zl-row-subject">Your invoice for March is ready</span>
+  <span class="zl-row-meta"><span class="zl-tag"><span>Receipts</span></span></span>
+  <span class="zl-row-time">Apr 5</span><span class="zl-row-actions"><button class="zl-btn zl-btn--icon " aria-label="Archive"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="4" rx="1"/><path d="M5.5 9v9a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9M10 13h4"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Trash"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Mark as read"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Remind me"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><path d="M12 8v4l2.5 1.5"/></svg></button><button class="zl-btn zl-btn--icon " aria-label="Label"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5V5a1 1 0 0 1 1-1h7.5L20 11.5 12.5 19z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg></button></span>
+</li>
+</ul></main>
+</div></div></div>
 </body>
 </html>

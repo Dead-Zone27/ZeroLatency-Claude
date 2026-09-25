@@ -1,19 +1,10 @@
-<!-- @dsCard group="Forms" height=170 -->
+<!-- @dsCard group="Forms" height=110 -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Checkbox — ZeroLatency DS</title>
 <style>html,body{margin:0}body{background:var(--bg);color:var(--text)}</style></head>
 <body class="zl" style="padding:24px">
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;max-width:760px">
-<label class="zl-check"><input type="checkbox"><span class="zl-check-box"></span><span>Unchecked<span class="zl-check-desc">Default</span></span></label>
-<label class="zl-check"><input type="checkbox" checked><span class="zl-check-box"></span><span>Draft replies for me<span class="zl-check-desc">Checked</span></span></label>
-<label class="zl-check"><input type="checkbox" class="ind"><span class="zl-check-box"></span><span>All newsletters<span class="zl-check-desc">Indeterminate</span></span></label>
-<label class="zl-check is-hover"><input type="checkbox"><span class="zl-check-box"></span><span>Hover</span></label>
-<label class="zl-check is-focus"><input type="checkbox" checked><span class="zl-check-box"></span><span>Focus-visible</span></label>
-<label class="zl-check is-active"><input type="checkbox"><span class="zl-check-box"></span><span>Active</span></label>
-<label class="zl-check"><input type="checkbox" disabled><span class="zl-check-box"></span><span>Disabled</span></label>
-<label class="zl-check"><input type="checkbox" disabled checked><span class="zl-check-box"></span><span>Disabled checked</span></label>
-</div>
-<script>document.querySelectorAll('input.ind').forEach(function(i){i.indeterminate=true});</script>
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px"><label class="zl-check "><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span>Unread</span></label><label class="zl-check is-checked"><input type="checkbox" checked><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span>Read</span></label><label class="zl-check is-mixed"><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span>Mixed</span></label><label class="zl-check is-focus"><input type="checkbox"><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span>Focused</span></label><label class="zl-check"><input type="checkbox" disabled><span class="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2 4.1 7.3 8 2.8"/></svg></span><span style="color:var(--text-disabled)">Disabled</span></label></div>
+<p class="zl-field-hint" style="margin:0">In the thread list the box is hidden until the row is hovered, focused or already checked.</p>
 </body>
 </html>

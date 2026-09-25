@@ -11,15 +11,14 @@
   .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
   .art svg { display:block; width:480px; height:288px; }
   .brand { fill:var(--accent); }
-  .tint { fill:var(--accent-border); }
-  .ink { fill:var(--surface-inverse); }
-  .blk { rx:var(--radius-lg); }
-  .on-accent, .on-ink { fill:none; stroke-linecap:round; stroke-linejoin:round; }
-  .on-accent { stroke:var(--accent-fg); }
-  .big { stroke-width:12px; }
-  .on-ink { stroke:var(--accent); stroke-width:6px; }
+  .ink { fill:var(--surface-tooltip); }
+  .side { fill:var(--bg-sidebar); }
+  .t-blue { fill:var(--tag-blue-bg); } .t-yellow { fill:var(--tag-yellow-bg); } .t-green { fill:var(--tag-green-bg); }
+  .blk { rx:var(--radius-2xl); }
+  .chip { rx:var(--radius-sm); }
+  .dot { fill:var(--accent-fg); }
   .words { position:absolute; left:var(--space-8); bottom:var(--space-8); max-width:440px; }
-  .name { margin:0; font-size:64px; line-height:.95; font-weight:600; letter-spacing:-.035em; color:var(--text); }
+  .name { margin:0; font-size:72px; line-height:.95; font-weight:700; letter-spacing:-.035em; color:var(--text); }
   .tag { margin:var(--space-3) 0 0 2px; font-size:14px; line-height:20px; color:var(--text-muted); }
 </style>
 </head>
@@ -28,20 +27,26 @@
 <div class="art" aria-hidden="true">
 <svg viewBox="0 0 480 288" width="480" height="288">
 <!--
-  blocks      accent slab 144x280 bled off the top (the one brand hue, largest) · accent-border tint 112x136 · surface-inverse ink 192x216 bleeding off the right edge — about 30% of 960x288
-  arrangement one tall slab with two satellites, bottoms on one line space-6 above the edge, space-4 gutters
-  pattern     literal motif row: the mark's zero-with-tail — one large on the slab in accent-fg, three on the ink block with tails lengthening (speed) in accent; chosen because the mark itself is the brand's only shape
-  scales      sides in space-4 multiples, gutters space-4, motif pitch space-12, stroke space-3 / space-1.5, corners radius-lg
+  blocks      bg-sidebar slab 200x304 bled off the top (the app's warm canvas) · accent slab 120x200 (the one action hue) · surface-tooltip ink 152x152 bleeding off the right edge — about 35% of 960x288
+  arrangement one tall canvas slab with two satellites stepping down to the right, space-4 gutters, bottoms space-6 above the edge
+  pattern     geometric/modular row: label-chip tiles (chip-height 20, radius-sm) in tag-blue-bg, tag-yellow-bg and tag-green-bg stacked on the canvas slab like a thread list, one merged two-wide; chosen because tinted chips on a quiet canvas are what this system is
+  scales      sides in space-4/space-8 multiples, chip rows every space-8, blocks radius-2xl, chips radius-sm, unread dot size-unread-dot
 -->
-<rect class="brand blk" x="16" y="-16" width="144" height="280" rx="12"/>
-<rect class="tint blk" x="176" y="128" width="112" height="136" rx="12"/>
-<rect class="ink blk" x="304" y="48" width="192" height="216" rx="12"/>
-<path class="on-accent big" d="M80 92A40 40 0 1 0 120 132M80 92H136"/><path class="on-ink" d="M344 88A12 12 0 1 0 356 100M344 88H384"/><path class="on-ink" d="M344 136A12 12 0 1 0 356 148M344 136H424"/><path class="on-ink" d="M344 184A12 12 0 1 0 356 196M344 184H472"/>
+<rect class="side blk" x="16" y="-16" width="200" height="280" rx="12"/>
+<rect class="brand blk" x="232" y="64" width="120" height="200" rx="12"/>
+<rect class="ink blk" x="368" y="112" width="152" height="152" rx="12"/>
+<rect class="t-blue chip" x="40" y="40" width="96" height="20" rx="4"/><rect class="t-yellow chip" x="144" y="40" width="48" height="20" rx="4"/>
+<rect class="t-green chip" x="40" y="72" width="64" height="20" rx="4"/>
+<rect class="t-blue chip" x="40" y="104" width="152" height="20" rx="4"/>
+<rect class="t-yellow chip" x="40" y="136" width="80" height="20" rx="4"/><rect class="t-green chip" x="128" y="136" width="64" height="20" rx="4"/>
+<rect class="t-blue chip" x="40" y="168" width="112" height="20" rx="4"/>
+<rect class="t-yellow chip" x="40" y="200" width="56" height="20" rx="4"/>
+<circle class="dot" cx="260" cy="92" r="6"/>
 </svg>
 </div>
 <div class="words">
 <h1 class="name">ZeroLatency<br>DS</h1>
-<p class="tag">Calm by default, fast by design.</p>
+<p class="tag">Quiet canvas, one blue for action, soft inks for labels.</p>
 </div>
 </div>
 </body>
