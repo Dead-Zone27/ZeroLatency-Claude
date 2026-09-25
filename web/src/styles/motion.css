@@ -9,7 +9,7 @@
 @keyframes zl-pop-up { from { opacity: 0; transform: translateY(4px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes zl-rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes zl-modal-in { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
-@keyframes zl-slide-in-right { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes zl-slide-in-right { from { opacity: 0; transform: translateX(24px); } 40% { opacity: 1; } to { opacity: 1; transform: none; } }
 @keyframes zl-slide-in-left { from { transform: translateX(-100%); } to { transform: none; } }
 @keyframes zl-content-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes zl-row-in { from { opacity: 0; } to { opacity: 1; } }
@@ -56,7 +56,9 @@
 .zl-toast { animation: zl-pop-up var(--duration-slower) var(--ease-enter); }
 .zl-composer-dock .zl-composer { animation: zl-rise-in var(--duration-slower) var(--ease-enter); transition: height var(--duration-slower) var(--ease-standard); }
 .zl-composer.is-inline { animation: zl-content-in var(--duration-slow) var(--ease-enter); }
-.zl-sidepane { animation: zl-slide-in-right var(--duration-slower) var(--ease-enter); }
+/* Right tab: the column widens smoothly (see .zl-workspace) while the card glides in behind it. */
+.zl-sidepane { animation: zl-slide-in-right 420ms var(--ease-glide) both; will-change: transform, opacity; }
+.zl-sidepane > * { animation: zl-fade-in 260ms var(--ease-standard) 90ms both; }
 .zl-modal-host .zl-scrim, .zl-dialog-scrim, .zl-palette-scrim { animation: zl-fade-in var(--duration-slow) var(--ease-enter); }
 .zl-modal-host .zl-modal, .zl-dialog { animation: zl-modal-in var(--duration-slower) var(--ease-enter); }
 .zl-palette { animation: zl-pop-in var(--duration-slow) var(--ease-enter); }

@@ -8,13 +8,21 @@ a { color: inherit; }
 .zl-app-root { position: fixed; inset: 0; display: grid; grid-template-columns: var(--size-sidebar-width) minmax(0, 1fr); background: var(--bg); overflow: hidden; }
 .zl-app-root .zl-sidebar { width: auto; min-height: 0; overflow-y: auto; }
 .zl-workspace { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: 0; }
-.zl-workspace.has-side--thread { grid-template-columns: minmax(320px, 1fr) minmax(0, 1.25fr); }
-.zl-workspace.has-side--panel { grid-template-columns: minmax(0, 1fr) var(--size-panel-width); }
+.zl-workspace { --side-w: 0px; grid-template-columns: minmax(0, 1fr) var(--side-w); transition: grid-template-columns 420ms var(--ease-glide); }
+.zl-workspace.has-side--thread { --side-w: min(56%, calc(100% - 320px)); }
+.zl-workspace.has-side--panel { --side-w: var(--size-panel-width); }
+:root { --ease-glide: cubic-bezier(0.22, 1, 0.36, 1); }
+.zl-workspace > .zl-full, .zl-workspace > .zl-listpane { grid-column: 1; grid-row: 1; }
 
 /* Right-side tab: one card at a time (thread or edit view), lifted over the list with a rounded top-left corner. */
-.zl-sidepane { position: relative; z-index: 1; display: grid; min-width: 0; min-height: 0; margin-top: var(--space-2); background: var(--bg); border: 1px solid var(--border); border-right: 0; border-bottom: 0; border-top-left-radius: var(--radius-2xl); box-shadow: -10px 0 28px -18px rgb(0 0 0 / 0.28); overflow: hidden; }
+.zl-sidepane { grid-column: 2; grid-row: 1; position: relative; z-index: 1; display: grid; min-width: 0; min-height: 0; margin-top: 5px; background: var(--bg); border: 1px solid var(--border); border-right: 0; border-bottom: 0; border-top-left-radius: var(--radius-2xl); box-shadow: -10px 0 28px -18px rgb(0 0 0 / 0.28); overflow: hidden; }
 .zl-sidepane > .zl-peek, .zl-sidepane > .zl-panel { border-left: 0; width: auto; min-height: 0; }
-.zl-sidepane > .zl-peek { grid-template-rows: 44px 1fr; }
+.zl-sidepane > .zl-peek { grid-template-rows: 32px 1fr; }
+.zl-sidepane > .zl-panel { padding-top: 0; }
+.zl-sidepane .zl-panel-head { height: 32px; }
+/* Every top bar (sidebar account row, list header, right tab header) is centred on the same line: half the header height. */
+.zl-app-root .zl-sidebar { padding-top: 0; }
+.zl-app-root .zl-account { height: var(--size-header-height); padding-top: 0; padding-bottom: 0; margin-bottom: var(--space-1); }
 .zl-listpane { display: grid; grid-template-rows: var(--size-header-height) auto minmax(0, 1fr); min-width: 0; min-height: 0; }
 .zl-scroll { overflow-y: auto; min-height: 0; padding-bottom: var(--space-12); }
 .zl-list-empty { padding: var(--space-12) var(--space-4); }
@@ -46,7 +54,6 @@ a { color: inherit; }
 .zl-peek-body { min-height: 0; }
 .zl-center-scrim { position: fixed; inset: 0; z-index: var(--z-overlay); background: var(--overlay); display: grid; place-items: center; padding: var(--space-8); }
 .zl-center-scrim > .zl-peek { width: min(960px, 100%); height: min(92vh, 100%); border-radius: var(--radius-2xl); box-shadow: var(--shadow-xl); border: 0; overflow: hidden; }
-.zl-full { grid-column: 1 / -1; }
 .zl-message { padding: var(--space-4) 0; border-top: 1px solid var(--border); }
 .zl-message:first-of-type { border-top: 0; }
 .zl-message.is-collapsed { cursor: pointer; }

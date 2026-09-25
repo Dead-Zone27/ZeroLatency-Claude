@@ -121,10 +121,11 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
       </div>
       <div className="zl-nav-scroll">
         {scrollViews.map((v, i) => renderView(v, i + 1))}
-        {data.views.length > 6 ? (
-          <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
-        ) : null}
       </div>
+      {/* Outside the scroll area so it is always reachable. */}
+      {data.views.length > 6 ? (
+        <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
+      ) : null}
 
       <div className="zl-nav-section"><span className="zl-section-label">Mail</span></div>
       {folders.map((f) => {
