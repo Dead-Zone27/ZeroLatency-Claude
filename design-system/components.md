@@ -222,7 +222,7 @@ Original, code-built product mockup (sidebar views, inbox rows, agent panel) use
 - **Tokens:** `surface`, `bg-subtle`, `border`, `surface-selected`, `accent`, `accent-subtle`, `accent-border`, `accent-text`, `text-subtle`, `shadow-xl`, `radius-xl`, `font-mono`.
 - **Accessibility:** Treat as an image: `role="img"` with a descriptive `aria-label`; inner controls are not focusable (add `inert` in production).
 - **Do:** Use realistic but fictional names and subjects.
-- **Don't:** Never use Notion (or any third-party) screenshots; never show real customer data.
+- **Don't:** Never show real customer data. Notion Mail screenshots and assets are allowed as stand-ins while the product is for personal use (D12).
 
 ## Testimonial
 

@@ -98,7 +98,7 @@ In v3 the variables have no alpha channel, so opacity modifiers such as `bg-acce
 - **Contrast**: every text/background role pair passes WCAG AA in both themes (see `../components.md` → Contrast). Any new pairing has to pass too: re-run `build-tokens.mjs` after you add it to the pair list.
 - **Motion**: hover and press use `--duration-fast` with `--ease-standard`. Things entering use `--duration-slow` with `--ease-enter`. Under reduced motion, only opacity fades remain; `tokens.css` enforces this globally.
 - **Logo**: use `wordmark.svg` on light, `wordmark-dark.svg` on dark, and `logo-mark.svg` as the favicon and app icon. Keep clear space of half the mark's width around it.
-- **Never** use Notion assets, screenshots, copy or colors. Product visuals are the code-built `ScreenshotFrame` with fictional data. Testimonials stay marked "Placeholder".
+- **Notion Mail reference is allowed (D12).** For now the project is for personal use only, so Notion Mail assets and screenshots can be used directly, and its colors, fonts and layouts can be copied. Replace them when the product is rebranded. Testimonials stay marked "Placeholder".
 
 ## Breakpoints
 
