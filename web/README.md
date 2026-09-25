@@ -25,11 +25,20 @@ Views, properties, snippets, reminders and settings are stored in the browser (`
 ```bash
 cd web
 npm install
-cp .env.example .env.local   # then fill it in (see below)
+cp .env.example .env.local   # Windows: copy .env.example .env.local — then fill it in (see below)
 npm run dev                  # http://localhost:3000
 ```
 
-To try it without any credentials, run the built-in fictional mailbox: `npm run dev:demo`. AI features return canned text in demo mode unless `OPENAI_API_KEY` is set.
+`.env.local` goes in the `web` folder, next to `package.json`. Next.js reads it only at startup, so restart `npm run dev` after editing it.
+
+**Testing shortcut (local `npm run dev` only).** Nothing is required to start:
+
+- Without `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, the app opens a built-in sample mailbox. Set `ZL_DEMO=0` to turn this off.
+- Without `SESSION_SECRET`, a random one is generated and saved in `web/.zl-dev-secret` (git-ignored).
+- With `OPENAI_API_KEY` set, the AI features call OpenAI for real, including on the sample mailbox; without it they return canned text.
+- The terminal prints which mail and AI mode is active.
+
+Production (`next build` + `next start`, Vercel) never uses these shortcuts: until the required variables are set, it shows a setup page listing what is missing. `npm run dev:demo` forces the sample mailbox even when Google credentials are set.
 
 ### 1. Google Cloud setup (once)
 
