@@ -30,8 +30,13 @@ function useThemeSync() {
   const s = useSettings();
   useEffect(() => {
     const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ?? 'system';
+    // Cross-fade colours when the theme actually changes (not on first load).
+    if (current !== s.theme) root.classList.add('zl-theme-switching');
     if (s.theme === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', s.theme);
     root.setAttribute('data-font', s.fontSize);
+    const t = window.setTimeout(() => root.classList.remove('zl-theme-switching'), 350);
+    return () => window.clearTimeout(t);
   }, [s.theme, s.fontSize]);
 }
 
@@ -436,7 +441,7 @@ function App({ session }: { session: SessionInfo }) {
 
   return (
     <MailContext.Provider value={ctx}>
-      <div className={`zl-app-root ${settings.sidebarCollapsed ? 'is-collapsed' : ''} ${mobileSidebar ? 'show-sidebar' : ''}`} onClick={(e) => { if (mobileSidebar && (e.target as HTMLElement).closest('.zl-nav-item')) setMobileSidebar(false); }}>
+      <div className={`zl-app-root${mobileSidebar ? ' show-sidebar' : ''}`} onClick={(e) => { if (mobileSidebar && (e.target as HTMLElement).closest('.zl-nav-item')) setMobileSidebar(false); }}>
         <Sidebar onSearch={() => { setSearchOpen(true); setMobileSidebar(false); }} />
         <div className={`zl-workspace ${peek ? 'has-peek' : ''} ${panel ? 'has-panel' : ''}`}>
           {full ? <div className="zl-full" style={{ display: 'grid', minHeight: 0 }}>{threadView}</div> : (

@@ -2,11 +2,12 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { updateAccount, updateSettings, useAccountData } from '@/lib/client/store';
+import { updateAccount, useAccountData } from '@/lib/client/store';
 import { Glyph, Icon } from './icons';
 import { IconButton, Popover, useMenuKeys } from './ui';
 import { FOLDERS, useMail } from './mail-context';
 import { NewViewMenu } from './NewViewMenu';
+import { revealGroup, useThreadGroups } from './use-groups';
 
 function Avatar({ name, picture }: { name: string; picture: string | null }) {
   if (picture) {
@@ -60,6 +61,9 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const [showAllFolders, setShowAllFolders] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsedViews, setCollapsedViews] = useState(false);
+  // Views whose group list the user folded away. The active view's groups show by default, as in the reference.
+  const [foldedViews, setFoldedViews] = useState<Set<string>>(() => new Set());
+  const groups = useThreadGroups().filter((g) => g.title);
 
   const visibleViews = collapsedViews ? data.views.slice(0, 5) : data.views;
   const folders = showAllFolders ? FOLDERS : FOLDERS.filter((f) => ['all', 'sent', 'drafts', 'reminders'].includes(f.id));
@@ -85,48 +89,64 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
           <span className="zl-account-id" style={{ textAlign: 'left' }}><strong>{account.name}</strong><small>{account.email}</small></span>
           <Icon name="chevDown" size={12} />
         </button>
-        <IconButton icon="collapse" label="Collapse sidebar" size="sm" onClick={() => updateSettings({ sidebarCollapsed: true })} />
         <IconButton icon="compose" label="Compose a new email" shortcut="C" onClick={() => compose({ mode: 'new' })} />
       </div>
       <button className="zl-nav-item" onClick={onSearch}><Icon name="search" className="zl-icon--lg" /><span>Search</span></button>
 
       <div className="zl-nav-section">
-        <button className="zl-section-label" style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer' }} onClick={() => setCollapsedViews((c) => !c)} aria-expanded={!collapsedViews}>Views</button>
+        <span className="zl-section-label">Views</span>
         <IconButton icon="plus" label="New view" size="sm" onClick={(e) => setNewViewAnchor(e.currentTarget)} />
       </div>
-      {visibleViews.map((v, i) => {
-        const active = nav.kind === 'view' && nav.id === v.id;
-        const count = counts[`view:${v.id}`];
-        const keywordGroups = active && v.groupBy.kind === 'keywords' ? v.groupBy.keywords : [];
-        return (
-          <div key={v.id}>
-            <button
-              className="zl-nav-item"
-              aria-current={active ? 'page' : undefined}
-              onClick={() => navigate({ kind: 'view', id: v.id })}
-              draggable
-              onDragStart={() => setDragId(v.id)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => { reorder(v.id); setDragId(null); }}
-              onDragEnd={() => setDragId(null)}
-              aria-label={`${v.name}${count ? `, ${count} unread` : ''}${i < 9 ? `, shortcut ${i + 1}` : ''}`}
-              style={dragId === v.id ? { opacity: 0.5 } : undefined}
-            >
-              <Glyph name={v.glyph} ink={v.ink} />
-              <span>{v.name}</span>
-              {count ? <span className="zl-nav-count">{count >= 100 ? '99+' : count}</span> : null}
-            </button>
-            {keywordGroups.map((k) => (
-              <button key={k} className="zl-nav-item zl-nav-item--sub" onClick={() => document.getElementById(`group-k:${k.trim().toLowerCase()}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
-                <span className="zl-monogram" style={{ flex: 'none', width: 20 }}>{k.trim()[0]?.toUpperCase()}</span><span>{k}</span>
-              </button>
-            ))}
-          </div>
-        );
-      })}
-      {data.views.length > 5 ? (
-        <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
-      ) : null}
+      {/* Only the views scroll; search, the Mail folders and the footer stay put. */}
+      <div className="zl-nav-scroll">
+        {visibleViews.map((v, i) => {
+          const active = nav.kind === 'view' && nav.id === v.id;
+          const count = counts[`view:${v.id}`];
+          const hasGroups = active && groups.length > 0;
+          const open = hasGroups && !foldedViews.has(v.id);
+          const toggle = () => setFoldedViews((cur) => { const next = new Set(cur); if (next.has(v.id)) next.delete(v.id); else next.add(v.id); return next; });
+          return (
+            <div key={v.id} className={`zl-nav-view${dragId === v.id ? ' is-dragging' : ''}`}>
+              <div className="zl-nav-item-wrap">
+                <button
+                  className="zl-nav-item"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => navigate({ kind: 'view', id: v.id })}
+                  draggable
+                  onDragStart={() => setDragId(v.id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { reorder(v.id); setDragId(null); }}
+                  onDragEnd={() => setDragId(null)}
+                  aria-label={`${v.name}${count ? `, ${count} unread` : ''}${i < 9 ? `, shortcut ${i + 1}` : ''}`}
+                >
+                  <Glyph name={v.glyph} ink={v.ink} />
+                  <span>{v.name}</span>
+                  {count ? <span className="zl-nav-count">{count >= 100 ? '99+' : count}</span> : null}
+                </button>
+                {hasGroups ? (
+                  <button className="zl-nav-disclosure" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} ${v.name} groups`} onClick={toggle}>
+                    <Icon name="chevRight" size={12} />
+                  </button>
+                ) : null}
+              </div>
+              <div className={`zl-nav-sub${open ? ' is-open' : ''}`} aria-hidden={!open}>
+                <div>
+                  {active ? groups.map((g) => (
+                    <button key={g.key} className="zl-nav-item zl-nav-item--sub" tabIndex={open ? 0 : -1} onClick={() => revealGroup(g.key)}>
+                      {g.monogram ? <span className="zl-monogram">{g.monogram}</span> : <span className="zl-nav-bullet" aria-hidden />}
+                      <span>{g.title}</span>
+                      {g.threads.some((t) => t.unread) ? <span className="zl-nav-count">{g.threads.filter((t) => t.unread).length}</span> : null}
+                    </button>
+                  )) : null}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {data.views.length > 5 ? (
+          <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
+        ) : null}
+      </div>
 
       <div className="zl-nav-section"><span className="zl-section-label">Mail</span></div>
       {folders.map((f) => {

@@ -15,11 +15,10 @@ export interface Settings {
   autoAdvance: AutoAdvance;
   fontSize: FontSize;
   desktopNotifications: boolean;
-  sidebarCollapsed: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'system', threadStyle: 'side', autoAdvance: 'next', fontSize: 'large', desktopNotifications: false, sidebarCollapsed: false,
+  theme: 'system', threadStyle: 'side', autoAdvance: 'next', fontSize: 'large', desktopNotifications: false,
 };
 
 export type PropertyType = 'text' | 'number' | 'select' | 'multiSelect' | 'status' | 'date' | 'checkbox' | 'url';
