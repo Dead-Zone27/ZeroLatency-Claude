@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import { BootScript } from '@/components/BootScript';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -19,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <BootScript code={bootScript} />
+        <script dangerouslySetInnerHTML={{ __html: bootScript }} />
       </head>
       <body className="zl">{children}</body>
     </html>

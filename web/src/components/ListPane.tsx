@@ -1,8 +1,7 @@
 'use client';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { updateView, useAccountData, type PropertyDef, type PropertyValue } from '@/lib/client/store';
-import { ALL_HOVER_ACTIONS, type HoverAction } from '@/lib/shared/views';
-import { useThreadGroups } from './use-groups';
+import { updateSettings, updateView, useAccountData, useSettings, type PropertyDef, type PropertyValue } from '@/lib/client/store';
+import { ALL_HOVER_ACTIONS, groupThreads, type HoverAction } from '@/lib/shared/views';
 import { formatListDate, participantLabel } from '@/lib/shared/compose';
 import type { Label, ThreadSummary } from '@/lib/shared/types';
 import { Glyph, Icon, StatusDot } from './icons';
@@ -28,7 +27,19 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
   const data = useAccountData();
   const view = activeView;
   const props = useMemo(() => (view ? data.properties[view.id] ?? [] : []), [view, data.properties]);
-  const groups = useThreadGroups();
+  const groups = useMemo(() => {
+    const groupBy = view?.groupBy ?? (nav.kind === 'folder' && ['drafts', 'spam', 'trash'].includes(nav.id) ? { kind: 'none' as const } : { kind: 'date' as const });
+    const prop = groupBy.kind === 'property' ? props.find((p) => p.id === groupBy.propertyId) : undefined;
+    return groupThreads(state.threads, groupBy, {
+      me, labels,
+      propertyValue: prop ? (id) => {
+        const v = data.values[id]?.[prop.id];
+        const opt = prop.options.find((o) => o.id === (Array.isArray(v) ? v[0] : v)) ?? prop.options.find((o) => o.id === prop.defaultOptionId);
+        return opt?.name ?? null;
+      } : undefined,
+      propertyOptions: prop?.options.map((o) => o.name),
+    });
+  }, [state.threads, view, nav, props, me, labels, data.values]);
 
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -120,6 +131,7 @@ function GroupBlock({ id, title, monogram, children }: { id: string; title: stri
 
 function ViewHeader({ allSelected, someSelected, onSelectAll, onOpenSidebar }: { allSelected: boolean; someSelected: boolean; onSelectAll: (v: boolean) => void; onOpenSidebar: () => void }) {
   const { nav, activeView, refreshList, openEditView, openAutoLabel } = useMail();
+  const settings = useSettings();
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [groupAnchor, setGroupAnchor] = useState<HTMLElement | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -130,6 +142,7 @@ function ViewHeader({ allSelected, someSelected, onSelectAll, onOpenSidebar }: {
   return (
     <header className="zl-viewbar">
       <span className="zl-only-mobile"><IconButton icon="menu" label="Open sidebar" onClick={onOpenSidebar} /></span>
+      {settings.sidebarCollapsed ? <IconButton icon="expand" label="Expand sidebar" onClick={() => updateSettings({ sidebarCollapsed: false })} /> : null}
       <Check checked={allSelected} mixed={someSelected} onChange={onSelectAll} label="Select all threads" />
       <h1 className="zl-viewbar-title" style={{ fontSize: 'inherit', margin: 0 }}>
         {activeView ? (

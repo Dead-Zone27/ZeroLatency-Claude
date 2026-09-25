@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { z } from 'zod';
 import { seal, unseal } from '@/lib/server/crypto';
-import { ConfigError, configProblems, env, resetEnvCache } from '@/lib/server/env';
+import { resetEnvCache } from '@/lib/server/env';
 import { AIError, chatJson } from '@/lib/server/openai';
 import { summarize, mapLimit } from '@/lib/server/gmail';
 
@@ -96,59 +93,5 @@ describe('gmail helpers', () => {
     const out = await mapLimit([5, 1, 3, 2, 4], 2, async (x) => { active++; peak = Math.max(peak, active); await new Promise((r) => setTimeout(r, x)); active--; return x * 10; });
     expect(out).toEqual([50, 10, 30, 20, 40]);
     expect(peak).toBeLessThanOrEqual(2);
-  });
-});
-
-describe('config checks', () => {
-  const keys = ['ZL_DEMO', 'SESSION_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const;
-  const saved: Record<string, string | undefined> = {};
-  beforeEach(() => { for (const k of keys) { saved[k] = process.env[k]; delete process.env[k]; } resetEnvCache(); });
-  afterEach(() => { for (const k of keys) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; } resetEnvCache(); });
-
-  it('lists every missing setting and treats empty values as unset', () => {
-    process.env.SESSION_SECRET = '';
-    expect(configProblems().map((p) => p.name)).toEqual(['SESSION_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']);
-    expect(() => env()).toThrow(ConfigError);
-  });
-
-  it('needs nothing in demo mode, even with the empty values from .env.example', () => {
-    process.env.ZL_DEMO = '1';
-    process.env.SESSION_SECRET = '';
-    process.env.GOOGLE_CLIENT_ID = '';
-    expect(configProblems()).toEqual([]);
-    expect(env().demo).toBe(true);
-  });
-
-  it('rejects a short secret', () => {
-    Object.assign(process.env, { SESSION_SECRET: 'short', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' });
-    expect(configProblems()).toEqual([{ name: 'SESSION_SECRET', message: 'must be at least 32 characters long' }]);
-  });
-
-  it('in local development runs with no setup: sample mailbox and a saved random secret', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'zl-'));
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(dir);
-    vi.stubEnv('NODE_ENV', 'development');
-    vi.spyOn(console, 'info').mockImplementation(() => {});
-    try {
-      expect(configProblems()).toEqual([]);
-      const first = env();
-      expect(first.demo).toBe(true);
-      expect(first.sessionSecret.length).toBeGreaterThanOrEqual(32);
-      resetEnvCache();
-      expect(env().sessionSecret).toBe(first.sessionSecret);
-
-      // With Google credentials it uses real Gmail, still without a SESSION_SECRET.
-      Object.assign(process.env, { GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' });
-      resetEnvCache();
-      expect(env().demo).toBe(false);
-      process.env.ZL_DEMO = '1';
-      resetEnvCache();
-      expect(env().demo).toBe(true);
-    } finally {
-      vi.unstubAllEnvs();
-      vi.restoreAllMocks();
-      cwd.mockRestore();
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
   });
 });

@@ -6,15 +6,13 @@ body { font-family: var(--font-sans); font-size: var(--text-md); line-height: va
 button { font: inherit; }
 a { color: inherit; }
 .zl-app-root { position: fixed; inset: 0; display: grid; grid-template-columns: var(--size-sidebar-width) minmax(0, 1fr); background: var(--bg); overflow: hidden; }
+.zl-app-root.is-collapsed { grid-template-columns: minmax(0, 1fr); }
+.zl-app-root.is-collapsed > .zl-sidebar { display: none; }
 .zl-app-root .zl-sidebar { width: auto; min-height: 0; overflow-y: auto; }
 .zl-workspace { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: 0; }
-.zl-workspace.has-side--thread { grid-template-columns: minmax(320px, 1fr) minmax(0, 1.25fr); }
-.zl-workspace.has-side--panel { grid-template-columns: minmax(0, 1fr) var(--size-panel-width); }
-
-/* Right-side tab: one card at a time (thread or edit view), lifted over the list with a rounded top-left corner. */
-.zl-sidepane { position: relative; z-index: 1; display: grid; min-width: 0; min-height: 0; margin-top: var(--space-2); background: var(--bg); border: 1px solid var(--border); border-right: 0; border-bottom: 0; border-top-left-radius: var(--radius-2xl); box-shadow: -10px 0 28px -18px rgb(0 0 0 / 0.28); overflow: hidden; }
-.zl-sidepane > .zl-peek, .zl-sidepane > .zl-panel { border-left: 0; width: auto; min-height: 0; }
-.zl-sidepane > .zl-peek { grid-template-rows: 44px 1fr; }
+.zl-workspace.has-peek { grid-template-columns: minmax(320px, 1fr) minmax(0, 1.15fr); }
+.zl-workspace.has-panel { grid-template-columns: minmax(0, 1fr) var(--size-panel-width); }
+.zl-workspace.has-peek.has-panel { grid-template-columns: minmax(280px, 1fr) minmax(0, 1.15fr) var(--size-panel-width); }
 .zl-listpane { display: grid; grid-template-rows: var(--size-header-height) auto minmax(0, 1fr); min-width: 0; min-height: 0; }
 .zl-scroll { overflow-y: auto; min-height: 0; padding-bottom: var(--space-12); }
 .zl-list-empty { padding: var(--space-12) var(--space-4); }
@@ -32,14 +30,12 @@ a { color: inherit; }
 .zl-searchbar input::placeholder { color: var(--text-placeholder); }
 .zl-inline-name { border: 0; outline: none; background: var(--surface-input); border-radius: var(--radius-sm); padding: 2px 6px; font: inherit; font-weight: 500; color: var(--text); width: 220px; }
 
-/* Thread tab open: the list narrows to subject + date, as in the reference. */
-.zl-workspace.has-side--thread .zl-row { grid-template-columns: 20px 8px minmax(0, 1fr) auto; }
-.zl-workspace.has-side--thread .zl-row .zl-row-from, .zl-workspace.has-side--thread .zl-row .zl-row-meta { display: none; }
-.zl-workspace.has-side--thread .zl-row .zl-row-time { grid-column: 4; }
-.zl-workspace.has-side--thread .zl-row .zl-row-actions { display: none; }
-.zl-workspace.has-side--thread .zl-row:hover .zl-row-actions { display: flex; grid-column: 4; }
-.zl-workspace.has-side--thread .zl-group { padding-left: 36px; }
-.zl-workspace.has-side--thread .zl-viewbar .zl-btn--secondary { display: none; }
+/* Side peek: the list collapses to subject lines, as in the reference. */
+.zl-workspace.has-peek .zl-row { grid-template-columns: 20px 8px minmax(0, 1fr) auto; }
+.zl-workspace.has-peek .zl-row .zl-row-from, .zl-workspace.has-peek .zl-row .zl-row-meta, .zl-workspace.has-peek .zl-row .zl-row-time, .zl-workspace.has-peek .zl-row .zl-row-actions { display: none; }
+.zl-workspace.has-peek .zl-row:hover .zl-row-actions { display: flex; grid-column: 4; }
+.zl-workspace.has-peek .zl-group { padding-left: 36px; }
+.zl-workspace.has-peek .zl-viewbar .zl-btn--secondary { display: none; }
 
 /* Thread view */
 .zl-peek { min-height: 0; }
@@ -149,9 +145,9 @@ a { color: inherit; }
   .zl-app-root { grid-template-columns: minmax(0, 1fr); }
   .zl-app-root > .zl-sidebar { display: none; }
   .zl-app-root.show-sidebar > .zl-sidebar { display: flex; position: fixed; inset: 0 auto 0 0; width: min(280px, 85vw); z-index: var(--z-modal); box-shadow: var(--shadow-xl); }
-  .zl-workspace.has-side { grid-template-columns: minmax(0, 1fr); }
-  .zl-workspace.has-side > .zl-listpane { display: none; }
-  .zl-sidepane { margin-top: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .zl-workspace.has-peek, .zl-workspace.has-panel, .zl-workspace.has-peek.has-panel { grid-template-columns: minmax(0, 1fr); }
+  .zl-workspace.has-peek > .zl-listpane, .zl-workspace.has-panel > .zl-listpane { display: none; }
+  .zl-workspace > .zl-panel { width: 100%; border-left: 0; }
   .zl-onboard { grid-template-columns: 1fr; }
   .zl-onboard-right { display: none; }
   .zl-composer-dock { left: var(--space-2); right: var(--space-2); bottom: var(--space-2); }
@@ -169,30 +165,3 @@ a { color: inherit; }
 }
 .zl-only-mobile { display: none; }
 @media (max-width: 1023px) { .zl-only-mobile { display: inline-flex; } }
-.zl-setup-card { width: min(560px, 100%); text-align: left; }
-.zl-setup-card h1, .zl-setup-card > p:first-of-type { text-align: center; }
-.zl-setup-list { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); font-size: var(--text-sm); color: var(--text-muted); }
-.zl-setup-list code, .zl-setup-card p code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.92em; color: var(--text); }
-.zl-setup-code { margin: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-hover); font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--text-xs); line-height: 1.6; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
-
-/* ---------- Sidebar: only the Views list scrolls ---------- */
-.zl-app-root .zl-sidebar { overflow: hidden; }
-.zl-app-root .zl-sidebar > * { flex: none; }
-.zl-app-root .zl-sidebar > .zl-nav-scroll { flex: 0 1 auto; }
-.zl-nav-scroll > * { flex: none; }
-.zl-nav-scroll { display: flex; flex-direction: column; gap: 1px; min-height: 72px; overflow-y: auto; overscroll-behavior: contain; margin: 0 calc(-1 * var(--space-2)) 0 0; padding: 0 var(--space-1) 0 0; }
-
-/* ---------- Scrollbars: slim rounded pill, always visible, darker on hover ---------- */
-/* Chromium/Safari. (Setting the standard scrollbar-color would switch these off in Chrome, so it is only used for Firefox below.) */
-.zl-app-root ::-webkit-scrollbar, .zl-modal ::-webkit-scrollbar, .zl-popover::-webkit-scrollbar, .zl-dialog::-webkit-scrollbar { width: 10px; height: 10px; }
-.zl-app-root ::-webkit-scrollbar-track, .zl-modal ::-webkit-scrollbar-track, .zl-popover::-webkit-scrollbar-track, .zl-dialog::-webkit-scrollbar-track { background: transparent; }
-.zl-app-root ::-webkit-scrollbar-thumb, .zl-modal ::-webkit-scrollbar-thumb, .zl-popover::-webkit-scrollbar-thumb, .zl-dialog::-webkit-scrollbar-thumb { background: var(--text-placeholder); background-clip: padding-box; border: 3px solid transparent; border-radius: var(--radius-full); min-height: 32px; }
-.zl-app-root ::-webkit-scrollbar-thumb:hover, .zl-modal ::-webkit-scrollbar-thumb:hover, .zl-popover::-webkit-scrollbar-thumb:hover, .zl-dialog::-webkit-scrollbar-thumb:hover { background-color: var(--text-subtle); }
-.zl-app-root ::-webkit-scrollbar-corner { background: transparent; }
-@supports not selector(::-webkit-scrollbar) {
-  .zl-app-root *, .zl-modal *, .zl-popover, .zl-dialog { scrollbar-width: thin; scrollbar-color: var(--text-placeholder) transparent; }
-}
-/* Very short windows: let the whole sidebar scroll rather than clip the folders. */
-@media (max-height: 520px) { .zl-app-root .zl-sidebar { overflow-y: auto; } .zl-app-root .zl-sidebar > .zl-nav-scroll { flex: none; overflow: visible; } }
-
-.zl-nav-item.is-dragging { opacity: 0.5; }

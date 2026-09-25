@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { updateAccount, useAccountData } from '@/lib/client/store';
+import { updateAccount, updateSettings, useAccountData } from '@/lib/client/store';
 import { Glyph, Icon } from './icons';
 import { IconButton, Popover, useMenuKeys } from './ui';
 import { FOLDERS, useMail } from './mail-context';
@@ -61,8 +61,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsedViews, setCollapsedViews] = useState(false);
 
-  const [pinnedView, ...otherViews] = data.views;
-  const scrollViews = collapsedViews ? otherViews.slice(0, 5) : otherViews;
+  const visibleViews = collapsedViews ? data.views.slice(0, 5) : data.views;
   const folders = showAllFolders ? FOLDERS : FOLDERS.filter((f) => ['all', 'sent', 'drafts', 'reminders'].includes(f.id));
 
   const reorder = (targetId: string) => {
@@ -78,29 +77,6 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
     });
   };
 
-  const renderView = (v: (typeof data.views)[number], i: number, pinned = false) => {
-    const active = nav.kind === 'view' && nav.id === v.id;
-    const count = counts[`view:${v.id}`];
-    return (
-      <button
-        key={v.id}
-        className={`zl-nav-item${dragId === v.id ? ' is-dragging' : ''}`}
-        aria-current={active ? 'page' : undefined}
-        onClick={() => navigate({ kind: 'view', id: v.id })}
-        draggable={!pinned}
-        onDragStart={() => setDragId(v.id)}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={() => { if (!pinned) reorder(v.id); setDragId(null); }}
-        onDragEnd={() => setDragId(null)}
-        aria-label={`${v.name}${count ? `, ${count} unread` : ''}${i < 9 ? `, shortcut ${i + 1}` : ''}`}
-      >
-        <Glyph name={v.glyph} ink={v.ink} />
-        <span>{v.name}</span>
-        {count ? <span className="zl-nav-count">{count >= 100 ? '99+' : count}</span> : null}
-      </button>
-    );
-  };
-
   return (
     <nav className="zl-sidebar" aria-label="Mailbox">
       <div className="zl-account">
@@ -109,22 +85,48 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
           <span className="zl-account-id" style={{ textAlign: 'left' }}><strong>{account.name}</strong><small>{account.email}</small></span>
           <Icon name="chevDown" size={12} />
         </button>
+        <IconButton icon="collapse" label="Collapse sidebar" size="sm" onClick={() => updateSettings({ sidebarCollapsed: true })} />
         <IconButton icon="compose" label="Compose a new email" shortcut="C" onClick={() => compose({ mode: 'new' })} />
       </div>
       <button className="zl-nav-item" onClick={onSearch}><Icon name="search" className="zl-icon--lg" /><span>Search</span></button>
 
-      {/* The primary Inbox sits on its own above the Views list, which scrolls independently. */}
-      {pinnedView ? renderView(pinnedView, 0, true) : null}
       <div className="zl-nav-section">
-        <span className="zl-section-label">Views</span>
+        <button className="zl-section-label" style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer' }} onClick={() => setCollapsedViews((c) => !c)} aria-expanded={!collapsedViews}>Views</button>
         <IconButton icon="plus" label="New view" size="sm" onClick={(e) => setNewViewAnchor(e.currentTarget)} />
       </div>
-      <div className="zl-nav-scroll">
-        {scrollViews.map((v, i) => renderView(v, i + 1))}
-        {data.views.length > 6 ? (
-          <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
-        ) : null}
-      </div>
+      {visibleViews.map((v, i) => {
+        const active = nav.kind === 'view' && nav.id === v.id;
+        const count = counts[`view:${v.id}`];
+        const keywordGroups = active && v.groupBy.kind === 'keywords' ? v.groupBy.keywords : [];
+        return (
+          <div key={v.id}>
+            <button
+              className="zl-nav-item"
+              aria-current={active ? 'page' : undefined}
+              onClick={() => navigate({ kind: 'view', id: v.id })}
+              draggable
+              onDragStart={() => setDragId(v.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => { reorder(v.id); setDragId(null); }}
+              onDragEnd={() => setDragId(null)}
+              aria-label={`${v.name}${count ? `, ${count} unread` : ''}${i < 9 ? `, shortcut ${i + 1}` : ''}`}
+              style={dragId === v.id ? { opacity: 0.5 } : undefined}
+            >
+              <Glyph name={v.glyph} ink={v.ink} />
+              <span>{v.name}</span>
+              {count ? <span className="zl-nav-count">{count >= 100 ? '99+' : count}</span> : null}
+            </button>
+            {keywordGroups.map((k) => (
+              <button key={k} className="zl-nav-item zl-nav-item--sub" onClick={() => document.getElementById(`group-k:${k.trim().toLowerCase()}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
+                <span className="zl-monogram" style={{ flex: 'none', width: 20 }}>{k.trim()[0]?.toUpperCase()}</span><span>{k}</span>
+              </button>
+            ))}
+          </div>
+        );
+      })}
+      {data.views.length > 5 ? (
+        <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
+      ) : null}
 
       <div className="zl-nav-section"><span className="zl-section-label">Mail</span></div>
       {folders.map((f) => {

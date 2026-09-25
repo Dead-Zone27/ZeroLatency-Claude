@@ -1,6 +1,4 @@
 import { Mark } from '@/components/icons';
-import { SetupNeeded } from '@/components/SetupNeeded';
-import { configProblems } from '@/lib/server/env';
 
 export const metadata = { title: 'Sign in · ZeroLatency' };
 
@@ -17,8 +15,6 @@ function GoogleG() {
 
 export default async function LoginPage(props: { searchParams: Promise<{ error?: string; returnTo?: string }> }) {
   const { error, returnTo } = await props.searchParams;
-  const problems = configProblems();
-  if (problems.length) return <SetupNeeded problems={problems} />;
   const href = `/api/auth/login${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`;
   return (
     <main className="zl-center-page">
