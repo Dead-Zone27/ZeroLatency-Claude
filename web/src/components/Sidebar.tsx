@@ -1,0 +1,157 @@
+'use client';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/client/api';
+import { updateAccount, updateSettings, useAccountData } from '@/lib/client/store';
+import { Glyph, Icon } from './icons';
+import { IconButton, Popover, useMenuKeys } from './ui';
+import { FOLDERS, useMail } from './mail-context';
+import { NewViewMenu } from './NewViewMenu';
+
+function Avatar({ name, picture }: { name: string; picture: string | null }) {
+  if (picture) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img className="zl-avatar" src={picture} alt="" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />;
+  }
+  return <span className="zl-avatar" aria-hidden>{(name[0] ?? '?').toUpperCase()}</span>;
+}
+
+function AccountMenu({ anchor, onClose }: { anchor: HTMLElement; onClose: () => void }) {
+  const { session, account, openSettings } = useMail();
+  const router = useRouter();
+  const ref = useRef<HTMLDivElement>(null);
+  useMenuKeys(ref);
+  const switchTo = async (id: string) => {
+    await api.switchAccount(id);
+    window.location.reload();
+  };
+  return (
+    <Popover anchor={anchor} onClose={onClose} label="Accounts">
+      <div className="zl-menu" ref={ref} style={{ width: 280 }}>
+        <div className="zl-menu-label">Accounts</div>
+        {session.accounts.map((a) => (
+          <button key={a.id} className="zl-menu-item zl-menu-item--2line" onClick={() => (a.id === account.id ? onClose() : switchTo(a.id))} disabled={session.demo}>
+            <Avatar name={a.name} picture={a.picture} />
+            <span className="zl-menu-item-text">{a.name}<small>{a.email}</small></span>
+            {a.id === account.id ? <Icon name="check" className="zl-menu-item-check" /> : null}
+          </button>
+        ))}
+        {!session.demo ? (
+          <a className="zl-menu-item" href={`/api/auth/login?returnTo=${encodeURIComponent('/mail')}`}><Icon name="plus" />Add another account</a>
+        ) : null}
+        <div className="zl-menu-sep" />
+        <button className="zl-menu-item" onClick={() => { onClose(); openSettings('inbox'); }}><Icon name="gear" />Settings</button>
+        <button className="zl-menu-item" onClick={() => { onClose(); openSettings('account'); }}><Icon name="user" />Manage accounts</button>
+        {!session.demo ? (
+          <button className="zl-menu-item" onClick={async () => { const r = await api.logout({ accountId: account.id }); if (r.remaining) window.location.reload(); else router.replace('/login'); }}>
+            <Icon name="logout" />Sign out of {account.email}
+          </button>
+        ) : null}
+      </div>
+    </Popover>
+  );
+}
+
+export function Sidebar({ onSearch }: { onSearch: () => void }) {
+  const { account, nav, navigate, counts, compose, openSettings } = useMail();
+  const data = useAccountData();
+  const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
+  const [newViewAnchor, setNewViewAnchor] = useState<HTMLElement | null>(null);
+  const [showAllFolders, setShowAllFolders] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [collapsedViews, setCollapsedViews] = useState(false);
+
+  const visibleViews = collapsedViews ? data.views.slice(0, 5) : data.views;
+  const folders = showAllFolders ? FOLDERS : FOLDERS.filter((f) => ['all', 'sent', 'drafts', 'reminders'].includes(f.id));
+
+  const reorder = (targetId: string) => {
+    if (!dragId || dragId === targetId) return;
+    updateAccount((d) => {
+      const views = [...d.views];
+      const from = views.findIndex((v) => v.id === dragId);
+      const to = views.findIndex((v) => v.id === targetId);
+      if (from < 0 || to < 0) return d;
+      const [moved] = views.splice(from, 1);
+      views.splice(to, 0, moved!);
+      return { ...d, views };
+    });
+  };
+
+  return (
+    <nav className="zl-sidebar" aria-label="Mailbox">
+      <div className="zl-account">
+        <button className="zl-btn zl-btn--ghost" style={{ flex: 1, justifyContent: 'flex-start', padding: '0 4px', height: 36, minWidth: 0, gap: 8 }} onClick={(e) => setAccountAnchor(e.currentTarget)} aria-haspopup="menu" aria-label="Switch account">
+          <Avatar name={account.name} picture={account.picture} />
+          <span className="zl-account-id" style={{ textAlign: 'left' }}><strong>{account.name}</strong><small>{account.email}</small></span>
+          <Icon name="chevDown" size={12} />
+        </button>
+        <IconButton icon="collapse" label="Collapse sidebar" size="sm" onClick={() => updateSettings({ sidebarCollapsed: true })} />
+        <IconButton icon="compose" label="Compose a new email" shortcut="C" onClick={() => compose({ mode: 'new' })} />
+      </div>
+      <button className="zl-nav-item" onClick={onSearch}><Icon name="search" className="zl-icon--lg" /><span>Search</span></button>
+
+      <div className="zl-nav-section">
+        <button className="zl-section-label" style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer' }} onClick={() => setCollapsedViews((c) => !c)} aria-expanded={!collapsedViews}>Views</button>
+        <IconButton icon="plus" label="New view" size="sm" onClick={(e) => setNewViewAnchor(e.currentTarget)} />
+      </div>
+      {visibleViews.map((v, i) => {
+        const active = nav.kind === 'view' && nav.id === v.id;
+        const count = counts[`view:${v.id}`];
+        const keywordGroups = active && v.groupBy.kind === 'keywords' ? v.groupBy.keywords : [];
+        return (
+          <div key={v.id}>
+            <button
+              className="zl-nav-item"
+              aria-current={active ? 'page' : undefined}
+              onClick={() => navigate({ kind: 'view', id: v.id })}
+              draggable
+              onDragStart={() => setDragId(v.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => { reorder(v.id); setDragId(null); }}
+              onDragEnd={() => setDragId(null)}
+              aria-label={`${v.name}${count ? `, ${count} unread` : ''}${i < 9 ? `, shortcut ${i + 1}` : ''}`}
+              style={dragId === v.id ? { opacity: 0.5 } : undefined}
+            >
+              <Glyph name={v.glyph} ink={v.ink} />
+              <span>{v.name}</span>
+              {count ? <span className="zl-nav-count">{count >= 100 ? '99+' : count}</span> : null}
+            </button>
+            {keywordGroups.map((k) => (
+              <button key={k} className="zl-nav-item zl-nav-item--sub" onClick={() => document.getElementById(`group-k:${k.trim().toLowerCase()}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
+                <span className="zl-monogram" style={{ flex: 'none', width: 20 }}>{k.trim()[0]?.toUpperCase()}</span><span>{k}</span>
+              </button>
+            ))}
+          </div>
+        );
+      })}
+      {data.views.length > 5 ? (
+        <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
+      ) : null}
+
+      <div className="zl-nav-section"><span className="zl-section-label">Mail</span></div>
+      {folders.map((f) => {
+        const active = nav.kind === 'folder' && nav.id === f.id;
+        const count = f.id === 'drafts' || f.id === 'reminders' ? counts[`folder:${f.id}`] : undefined;
+        if (f.id === 'reminders' && !count && !active) return null;
+        return (
+          <button key={f.id} className="zl-nav-item" aria-current={active ? 'page' : undefined} onClick={() => navigate({ kind: 'folder', id: f.id })}>
+            <Icon name={f.icon} className="zl-icon--lg" /><span>{f.name}</span>
+            {count ? <span className="zl-nav-count">{count >= 100 ? '99+' : count}</span> : null}
+          </button>
+        );
+      })}
+      <button className="zl-nav-item" onClick={() => setShowAllFolders((s) => !s)}>
+        <Icon name={showAllFolders ? 'chevUp' : 'chevDown'} className="zl-icon--lg" /><span>{showAllFolders ? 'Less' : 'More'}</span>
+      </button>
+
+      <div className="zl-sidebar-foot">
+        <IconButton icon="gear" label="Settings" placement="top" onClick={() => openSettings('inbox')} />
+        <IconButton icon="keyboard" label="Keyboard shortcuts" shortcut="?" placement="top" onClick={() => openSettings('shortcuts')} />
+        <IconButton icon="help" label="Help & feedback" placement="top" onClick={() => window.open('https://github.com/Dead-Zone27/ZeroLatency-Claude/issues', '_blank', 'noopener')} />
+      </div>
+
+      {accountAnchor ? <AccountMenu anchor={accountAnchor} onClose={() => setAccountAnchor(null)} /> : null}
+      {newViewAnchor ? <NewViewMenu anchor={newViewAnchor} onClose={() => setNewViewAnchor(null)} /> : null}
+    </nav>
+  );
+}
