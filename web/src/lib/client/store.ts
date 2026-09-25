@@ -15,10 +15,15 @@ export interface Settings {
   autoAdvance: AutoAdvance;
   fontSize: FontSize;
   desktopNotifications: boolean;
+  /** Which revision of the app defaults this saved state has been brought up to (see initStores). */
+  defaultsVersion?: number;
 }
 
+/** Bump when a default changes and existing saved state should adopt it once. */
+export const DEFAULTS_VERSION = 2;
+
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'system', threadStyle: 'side', autoAdvance: 'next', fontSize: 'large', desktopNotifications: false,
+  theme: 'light', threadStyle: 'side', autoAdvance: 'next', fontSize: 'large', desktopNotifications: false, defaultsVersion: DEFAULTS_VERSION,
 };
 
 export type PropertyType = 'text' | 'number' | 'select' | 'multiSelect' | 'status' | 'date' | 'checkbox' | 'url';
@@ -81,11 +86,12 @@ export interface AccountData {
   signatureEnabled: boolean;
   /** Per-view notification high-water mark (newest lastDate notified). */
   notifiedUntil: Record<string, number>;
+  defaultsVersion?: number;
 }
 
 export const emptyAccountData = (): AccountData => ({
   onboarded: false, views: [], properties: {}, values: {}, autoLabels: [], autoLabelSeen: {}, snippets: [], reminders: {}, labelInks: {},
-  signatureOnReplies: true, signatureEnabled: false, notifiedUntil: {},
+  signatureOnReplies: true, signatureEnabled: false, notifiedUntil: {}, defaultsVersion: DEFAULTS_VERSION,
 });
 
 // ---------- Persistence ----------
@@ -100,6 +106,18 @@ function load<T>(key: string, fallback: T): T {
     return raw ? { ...fallback, ...(JSON.parse(raw) as Partial<T>) } : fallback;
   } catch {
     return fallback;
+  }
+}
+
+/** The defaultsVersion actually saved under `key` (load() fills missing fields from the defaults, which would hide it). */
+function savedVersion(key: string): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    return (JSON.parse(raw) as { defaultsVersion?: number }).defaultsVersion ?? 1;
+  } catch {
+    return null;
   }
 }
 
@@ -138,9 +156,23 @@ let activeAccount: string | null = null;
 export const accountStore = createStore<AccountData>(emptyAccountData(), () => (activeAccount ? acctKey(activeAccount) : null));
 
 export function initStores(accountId: string) {
-  settingsStore.replace(load(SETTINGS_KEY, DEFAULT_SETTINGS));
+  let settings = load(SETTINGS_KEY, DEFAULT_SETTINGS);
+  // v2 defaults: start in light mode (previously followed the system theme).
+  const settingsVersion = savedVersion(SETTINGS_KEY);
+  if (settingsVersion !== null && settingsVersion < 2) {
+    settings = { ...settings, theme: settings.theme === 'system' ? 'light' : settings.theme, defaultsVersion: DEFAULTS_VERSION };
+    save(SETTINGS_KEY, settings);
+  }
+  settingsStore.replace(settings);
   activeAccount = accountId;
-  accountStore.replace(load(acctKey(accountId), emptyAccountData()));
+  let data = load(acctKey(accountId), emptyAccountData());
+  // v2 defaults: views group Unread first (previously by date). Views grouped some other way are left alone.
+  const dataVersion = savedVersion(acctKey(accountId));
+  if (dataVersion !== null && dataVersion < 2) {
+    data = { ...data, views: data.views.map((v) => (v.groupBy.kind === 'date' ? { ...v, groupBy: { kind: 'unread' } } : v)), defaultsVersion: DEFAULTS_VERSION };
+    save(acctKey(accountId), data);
+  }
+  accountStore.replace(data);
 }
 
 export function useSettings(): Settings {

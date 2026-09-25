@@ -243,7 +243,7 @@ export function uid(prefix = ''): string {
 
 export function baseView(partial: Partial<View> & Pick<View, 'name'>): View {
   return {
-    id: uid('v_'), glyph: 'inbox', ink: 'gray', filters: [], groupBy: { kind: 'date' },
+    id: uid('v_'), glyph: 'inbox', ink: 'gray', filters: [], groupBy: { kind: 'unread' },
     shown: ['from', 'subject', 'labels', 'date', 'files'], hoverActions: ['archive', 'trash', 'read', 'remind', 'label'], notify: false,
     ...partial,
   };
