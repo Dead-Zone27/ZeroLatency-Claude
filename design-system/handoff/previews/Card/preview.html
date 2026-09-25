@@ -1,0 +1,15 @@
+<!-- @dsCard group="Layout" height=300 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Card — ZeroLatency DS</title>
+<style>html,body{margin:0}body{background:var(--bg);color:var(--text)}</style></head>
+<body class="zl" style="padding:24px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+<div class="zl-card"><div class="zl-icon-tile"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6.5A5.5 5.5 0 1 0 16.5 12"/><path d="M11 6.5h8"/></svg></div><h3 class="zl-card-title">Default</h3><p class="zl-card-body">Hairline border on surface. Static content.</p></div>
+<a class="zl-card zl-card--interactive is-hover" href="#"><h3 class="zl-card-title">Interactive · hover</h3><p class="zl-card-body">Border strengthens, small shadow.</p></a>
+<a class="zl-card zl-card--interactive is-focus" href="#"><h3 class="zl-card-title">Focus-visible</h3><p class="zl-card-body">2px focus ring, 2px offset.</p></a>
+<div class="zl-card zl-card--selected"><h3 class="zl-card-title">Selected</h3><p class="zl-card-body">Accent outline for a chosen option.</p></div>
+<div class="zl-card zl-card--raised"><h3 class="zl-card-title">Raised</h3><p class="zl-card-body">surface-raised + shadow-md; popovers and panels.</p><div class="zl-card-foot"><button class="zl-btn zl-btn--secondary zl-btn--sm">Dismiss</button><button class="zl-btn zl-btn--primary zl-btn--sm">Apply rule</button></div></div>
+</div>
+</body>
+</html>
