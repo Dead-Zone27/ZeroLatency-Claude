@@ -30,8 +30,13 @@ function useThemeSync() {
   const s = useSettings();
   useEffect(() => {
     const root = document.documentElement;
+    const current = root.getAttribute('data-theme') ?? 'system';
+    // Cross-fade colours when the theme actually changes (not on first load).
+    if (current !== s.theme) root.classList.add('zl-theme-switching');
     if (s.theme === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', s.theme);
     root.setAttribute('data-font', s.fontSize);
+    const t = window.setTimeout(() => root.classList.remove('zl-theme-switching'), 350);
+    return () => window.clearTimeout(t);
   }, [s.theme, s.fontSize]);
 }
 
@@ -383,11 +388,13 @@ function App({ session }: { session: SessionInfo }) {
     return () => window.removeEventListener('zl:reauth', onReauth);
   }, [me, push]);
 
+  // The right side holds one tab at a time: opening a thread closes the edit-view panel and vice versa.
+  const showThread = useCallback((id: string | null) => { setOpenThreadId(id); if (id) setPanel(null); }, []);
   const ctx: MailCtx = {
     session, account, me, labels, userLabels, refreshLabels, ensureLabel, nav, navigate, activeView, query, threads: list.threads,
-    act, openThread: setOpenThreadId, openThreadId, compose,
+    act, openThread: showThread, openThreadId, compose,
     openSettings: (s) => setSettingsOpen(s ?? 'inbox'),
-    openEditView: (viewId, step = 'root') => setPanel({ viewId, step }),
+    openEditView: (viewId, step = 'root') => { setPanel({ viewId, step }); if (settings.threadStyle === 'side') setOpenThreadId(null); },
     openAutoLabel: (seed) => setAutoLabelSeed(seed ?? {}),
     counts, refreshList, refreshCounts, aiEnabled: session.aiEnabled,
   };
@@ -397,7 +404,7 @@ function App({ session }: { session: SessionInfo }) {
     enabled: data.onboarded && !anyOverlay,
     threads: list.threads,
     selected, setSelected,
-    openThreadId, setOpenThreadId,
+    openThreadId, setOpenThreadId: showThread,
     act, compose, navigate, views: data.views,
     openPalette: () => setPaletteOpen(true),
     openSearch: () => setSearchOpen(true),
@@ -422,6 +429,7 @@ function App({ session }: { session: SessionInfo }) {
   const peek = openThreadId && settings.threadStyle === 'side';
   const full = openThreadId && settings.threadStyle === 'full';
   const center = openThreadId && settings.threadStyle === 'center';
+  const side: 'thread' | 'panel' | null = peek ? 'thread' : panel ? 'panel' : null;
   const threadView = openThreadId ? (
     <ThreadView
       key={openThreadId}
@@ -436,9 +444,9 @@ function App({ session }: { session: SessionInfo }) {
 
   return (
     <MailContext.Provider value={ctx}>
-      <div className={`zl-app-root ${settings.sidebarCollapsed ? 'is-collapsed' : ''} ${mobileSidebar ? 'show-sidebar' : ''}`} onClick={(e) => { if (mobileSidebar && (e.target as HTMLElement).closest('.zl-nav-item')) setMobileSidebar(false); }}>
+      <div className={`zl-app-root${mobileSidebar ? ' show-sidebar' : ''}`} onClick={(e) => { if (mobileSidebar && (e.target as HTMLElement).closest('.zl-nav-item')) setMobileSidebar(false); }}>
         <Sidebar onSearch={() => { setSearchOpen(true); setMobileSidebar(false); }} />
-        <div className={`zl-workspace ${peek ? 'has-peek' : ''} ${panel ? 'has-panel' : ''}`}>
+        <div className={`zl-workspace${side ? ` has-side has-side--${side}` : ''}`}>
           {full ? <div className="zl-full" style={{ display: 'grid', minHeight: 0 }}>{threadView}</div> : (
             <ListPane
               state={list}
@@ -451,8 +459,12 @@ function App({ session }: { session: SessionInfo }) {
               onOpenSidebar={() => setMobileSidebar(true)}
             />
           )}
-          {peek ? threadView : null}
-          {panel ? <EditViewPanel key={panel.viewId} viewId={panel.viewId} step={panel.step} setStep={(step) => setPanel({ ...panel, step })} onClose={() => setPanel(null)} /> : null}
+          {side ? (
+            // Keyed by kind: switching threads keeps the tab in place; switching tab kind slides the new one in.
+            <aside className="zl-sidepane" key={side}>
+              {side === 'thread' ? threadView : panel ? <EditViewPanel key={panel.viewId} viewId={panel.viewId} step={panel.step} setStep={(step) => setPanel({ ...panel, step })} onClose={() => setPanel(null)} /> : null}
+            </aside>
+          ) : null}
         </div>
       </div>
       {center ? <div className="zl-center-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenThreadId(null); }}>{threadView}</div> : null}
