@@ -186,7 +186,7 @@ export const COMPONENTS = [
     tokens: '`surface`, `bg-subtle`, `border`, `surface-selected`, `accent`, `accent-subtle`, `accent-border`, `accent-text`, `text-subtle`, `shadow-xl`, `radius-xl`, `font-mono`.',
     a11y: 'Treat as an image: `role="img"` with a descriptive `aria-label`; inner controls are not focusable (add `inert` in production).',
     do: 'Use realistic but fictional names and subjects.',
-    dont: 'Never use Notion (or any third-party) screenshots; never show real customer data.',
+    dont: 'Never show real customer data. Notion Mail screenshots and assets are allowed as stand-ins while the product is for personal use (D12).',
   },
   {
     name: 'Testimonial', group: 'Patterns', kind: 'pattern',

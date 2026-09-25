@@ -124,7 +124,7 @@ Notion Mail was an AI-assisted email client that sat on top of an existing Gmail
 
 ## 12. Screenshot index
 
-**10 PNGs** are in `research/screenshots/`. They were captured on 2026-09-25 through the user's in-app browser, because the cloud sandbox's egress blocks notion.com. Each file is an **official image asset** fetched from a live notion.com page and converted to PNG. GIF demos were saved as a single frame, and large images were downscaled to at most 1440px wide. They are internal research references only and must **never** be used on the ZeroLatency site.
+**10 PNGs** are in `research/screenshots/`. They were captured on 2026-09-25 through the user's in-app browser, because the cloud sandbox's egress blocks notion.com. Each file is an **official image asset** fetched from a live notion.com page and converted to PNG. GIF demos were saved as a single frame, and large images were downscaled to at most 1440px wide. Since D12 (personal-use phase) they may be used on the site as stand-ins until the rebrand.
 
 Limits:
 - **No page-level screenshots.** Notion's Content Security Policy blocked loading html2canvas, and the browser tool can't save its own screenshots to disk. The homepage hero and CTA are therefore represented by their image assets, and their layout is described from live inspection and computed styles in §5–§8.
@@ -168,6 +168,8 @@ Each is stated as a transferable principle, not a visual to copy.
 9. **Treat accessibility as part of the product.** Offer system, light and dark themes plus a high-contrast option from day one.
 
 ## 14. What NOT to copy
+
+> **Superseded by D12 (2026-09-25).** The project is for personal use only for now, so Notion Mail assets, colors, fonts and layouts may be used and copied until the planned rebrand. The list below is kept as the checklist of what to replace at rebrand time.
 
 - The **Notion name**, the "Notion Mail" product name, and any "N" mark, logo, wordmark or app icon.
 - The **serif logotype** and any custom Notion typefaces. Pick licensed or open fonts of our own.
