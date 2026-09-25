@@ -410,6 +410,12 @@ function App({ session }: { session: SessionInfo }) {
   const [autoLabelSeed, setAutoLabelSeed] = useState<{ name?: string; description?: string } | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSidebar, setMobileSidebar] = useState(false);
+  useEffect(() => {
+    if (!mobileSidebar) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileSidebar(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileSidebar]);
 
   useEffect(() => {
     const onReauth = (e: Event) => push({ message: (e as CustomEvent<string>).detail ?? 'Please sign in again.', tone: 'error', action: { label: 'Sign in', run: () => { window.open(`/api/auth/login?hint=${encodeURIComponent(me)}`, '_self'); } }, duration: 20000 });
@@ -478,8 +484,9 @@ function App({ session }: { session: SessionInfo }) {
 
   return (
     <MailContext.Provider value={ctx}>
-      <div className={`zl-app-root${mobileSidebar ? ' show-sidebar' : ''}`} onClick={(e) => { if (mobileSidebar && (e.target as HTMLElement).closest('.zl-nav-item')) setMobileSidebar(false); }}>
+      <div className={`zl-app-root${mobileSidebar ? ' show-sidebar' : ''}`} onClick={(e) => { const hit = (e.target as HTMLElement).closest('.zl-nav-item, .zl-sidebar-foot button, .zl-account button'); if (mobileSidebar && hit && !hit.hasAttribute('data-keep-drawer')) setMobileSidebar(false); }}>
         <Sidebar onSearch={() => { setSearchOpen(true); setMobileSidebar(false); }} />
+        {mobileSidebar ? <div className="zl-drawer-scrim" aria-hidden onClick={() => setMobileSidebar(false)} /> : null}
         <div className={`zl-workspace${side ? ` has-side has-side--${side}` : ''}`}>
           {full ? <div className="zl-full" style={{ display: 'grid', minHeight: 0 }}>{threadView}</div> : nav.kind === 'summary' && !searchOpen ? (
             <SummaryGrid state={list} onLoadMore={loadMore} onRetry={() => loadList(query)} onOpenSidebar={() => setMobileSidebar(true)} />

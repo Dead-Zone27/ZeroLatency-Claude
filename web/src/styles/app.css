@@ -9,7 +9,7 @@ a { color: inherit; }
 .zl-app-root .zl-sidebar { width: auto; min-height: 0; overflow-y: auto; }
 .zl-workspace { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: 0; }
 .zl-workspace { --side-w: 0px; grid-template-columns: minmax(0, 1fr) var(--side-w); transition: grid-template-columns 420ms var(--ease-glide); }
-.zl-workspace.has-side--thread { --side-w: min(56%, calc(100% - 320px)); }
+.zl-workspace.has-side--thread { --side-w: min(56%, calc(100% - 420px)); }
 .zl-workspace.has-side--panel { --side-w: var(--size-panel-width); }
 :root { --ease-glide: cubic-bezier(0.22, 1, 0.36, 1); }
 .zl-workspace > .zl-full, .zl-workspace > .zl-listpane { grid-column: 1; grid-row: 1; }
@@ -202,7 +202,7 @@ a { color: inherit; }
 .zl-nav-item.is-dragging { opacity: 0.5; }
 
 /* ---------- Summary: the Inbox as a card grid ---------- */
-.zl-card-grid { list-style: none; margin: 0; padding: var(--space-3) var(--space-4) var(--space-6); display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-3); }
+.zl-card-grid { list-style: none; margin: 0; padding: var(--space-3) var(--space-4) var(--space-6); display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: var(--space-3); }
 .zl-card-grid > li { display: grid; min-width: 0; }
 .zl-mail-card { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-3) var(--space-4) var(--space-3); border-radius: var(--radius-xl); background: var(--bg); border: 1px solid var(--border); box-shadow: var(--shadow-xs); cursor: pointer; outline: none; transition: box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard); }
 .zl-mail-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); transform: translateY(-1px); }
@@ -257,7 +257,7 @@ a { color: inherit; }
    The sender column is sized from the list's own width (container units), so it is identical on every row and
    shrinks smoothly as a side tab opens. Label chips keep their full text; the subject + preview give way first. */
 .zl-listpane { container-type: inline-size; }
-.zl-row { grid-template-columns: 20px 8px clamp(80px, 20cqi, 200px) minmax(96px, 1fr) minmax(0, max-content) minmax(64px, auto); }
+@media (min-width: 768px) { .zl-row { grid-template-columns: 20px 8px clamp(80px, 20cqi, 200px) minmax(96px, 1fr) minmax(0, max-content) minmax(64px, auto); } }
 /* Chips that don't fit wrap onto a hidden second line, so they disappear whole instead of being sliced; only the
    first chip may shorten (with an ellipsis). */
 .zl-row-meta { max-width: 36cqi; height: var(--size-chip-height); flex-wrap: wrap; overflow: hidden; row-gap: 8px; }
@@ -267,4 +267,83 @@ a { color: inherit; }
 @container (max-width: 700px) {
   /* Narrow list: first label only, as in the reference (keeps the subject readable). */
   .zl-row-meta .zl-tag:not(:first-of-type), .zl-row-meta .zl-tag-more { display: none; }
+}
+
+/* ================= Responsive: every screen size =================
+   ≥1200   sidebar + list + right tab side by side
+   1024–1199 sidebar + list; an open thread takes the whole workspace (a list under ~420px isn't usable)
+   768–1023  no fixed sidebar (drawer); list or tab fills the screen
+   <768    phone: two-line rows, full-screen composer, drawer with a tap-to-close backdrop */
+
+/* Nothing may push the page sideways. */
+.zl-popover { max-width: calc(100vw - 16px); }
+/* Menus opened from inside a modal, dialog or the composer must sit above them (they were rendering underneath,
+   which made e.g. the Settings dropdowns look dead). */
+.zl-popover { z-index: calc(var(--z-modal) + 20); }
+.zl-popover > .zl-menu { max-width: 100%; }
+.zl-viewbar { min-width: 0; }
+.zl-viewbar-title { min-width: 0; flex: 0 1 auto; }
+.zl-viewbar-title > span:not(.zl-only-mobile) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.zl-viewbar-tools { flex: none; margin-left: auto; }
+
+/* Toolbars compact to icons when their pane is narrow (container queries follow the pane, not the window). */
+@container (max-width: 560px) {
+  .zl-viewbar .zl-btn--secondary { font-size: 0; gap: 0; padding: 0 7px; }
+}
+.zl-sidepane-layer { container-type: inline-size; }
+@container (max-width: 600px) {
+  .zl-peek-bar .zl-btn--secondary { font-size: 0; gap: 0; padding: 0 7px; margin-right: 2px; }
+  .zl-peek-body { padding-left: var(--space-4); padding-right: var(--space-4); }
+}
+/* Comfortable reading width on large screens. */
+.zl-peek-body > * { max-width: 880px; }
+
+/* 1024–1199: an open thread covers the workspace; Edit view stays beside a slightly narrower panel. */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .zl-workspace.has-side--thread { --side-w: 100%; }
+  .zl-workspace.has-side--thread > .zl-listpane { overflow: hidden; }
+  .zl-workspace.has-side--panel { --side-w: 360px; }
+}
+
+/* Drawer backdrop (tablet and phone): tap outside the sidebar to close it. */
+.zl-drawer-scrim { display: none; }
+@media (max-width: 1023px) {
+  .zl-drawer-scrim { display: block; position: fixed; inset: 0; z-index: calc(var(--z-modal) - 1); background: var(--overlay); animation: zl-fade-in var(--duration-slow) var(--ease-enter); }
+  .zl-sidepane { grid-column: 1; }
+  .zl-workspace { transition: none; }
+}
+
+/* Phones */
+@media (max-width: 767px) {
+  .zl-row { grid-template-columns: 0 10px minmax(0, 1fr) auto; }
+  .zl-row .zl-check { display: none; }
+  .zl-card-grid { grid-template-columns: minmax(0, 1fr); padding: var(--space-3); }
+  .zl-searchbar { padding: 0 var(--space-2) 0 var(--space-3); }
+  .zl-search-suggest { left: var(--space-2); right: var(--space-2); }
+  .zl-search-hint { display: none; }
+  .zl-composer-dock { inset: 0; max-width: none; }
+  .zl-composer-dock .zl-composer { width: 100%; height: 100% !important; border-radius: 0; }
+  .zl-toasts { left: var(--space-2); right: var(--space-2); bottom: var(--space-2); }
+  .zl-dialog-scrim { padding: var(--space-3); align-items: end; }
+  .zl-dialog { width: 100%; }
+}
+@media (max-width: 400px) {
+  .zl-message-head { grid-template-columns: 1fr; }
+}
+/* Touch devices: bigger hit areas for the sidebar and menus. */
+@media (hover: none) and (pointer: coarse) {
+  .zl-nav-item, .zl-menu-item { min-height: 40px; }
+  .zl-row-actions { display: none !important; }
+}
+/* Phones: Settings sections become a scrollable tab row above the content (the sidebar list is hidden there). */
+@media (max-width: 767px) {
+  .zl-modal { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .zl-modal-nav { display: flex; flex-direction: row; gap: var(--space-1); overflow-x: auto; padding: var(--space-2); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .zl-modal-nav::-webkit-scrollbar { display: none; }
+  .zl-modal-nav .zl-section-label { display: none; }
+  .zl-modal-nav .zl-nav-item { flex: none; width: auto; white-space: nowrap; }
+  .zl-modal-nav { padding-right: 48px; }
+  .zl-modal-close { top: 10px; right: 8px; z-index: 1; background: var(--bg); box-shadow: -8px 0 8px var(--bg); }
+  .zl-modal-host .zl-modal { max-height: calc(100dvh - 24px); }
+  .zl-modal-main { overflow-y: auto; }
 }

@@ -84,6 +84,19 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
     });
   };
 
+  // Touch: long-press a view to open its menu (iOS never sends contextmenu). The timer lives on the element.
+  const cancelPress = (e: { currentTarget: HTMLElement }) => {
+    const id = Number(e.currentTarget.dataset.pressTimer);
+    if (id) window.clearTimeout(id);
+    delete e.currentTarget.dataset.pressTimer;
+  };
+  const startPress = (v: View, e: React.PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== 'touch') return;
+    const el = e.currentTarget;
+    cancelPress(e);
+    el.dataset.pressTimer = String(window.setTimeout(() => { delete el.dataset.pressTimer; setMenu({ view: v, at: el.getBoundingClientRect(), el }); }, 500));
+  };
+
   const openMenu = (v: View, e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault();
     const el = e.currentTarget;
@@ -117,7 +130,11 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
         className={`zl-nav-item${dragId === v.id ? ' is-dragging' : ''}${menu?.view.id === v.id ? ' is-hover' : ''}`}
         aria-current={active ? 'page' : undefined}
         onClick={() => navigate({ kind: 'view', id: v.id })}
-        onContextMenu={(e) => openMenu(v, e)}
+        onContextMenu={(e) => { cancelPress(e); openMenu(v, e); }}
+        onPointerDown={(e) => startPress(v, e)}
+        onPointerUp={cancelPress}
+        onPointerCancel={cancelPress}
+        onPointerLeave={cancelPress}
         onDoubleClick={() => setRenamingId(v.id)}
         draggable={!pinned}
         onDragStart={() => setDragId(v.id)}
@@ -137,7 +154,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   return (
     <nav className="zl-sidebar" aria-label="Mailbox">
       <div className="zl-account">
-        <button className="zl-btn zl-btn--ghost" style={{ flex: 1, justifyContent: 'flex-start', padding: '0 4px', height: 36, minWidth: 0, gap: 8 }} onClick={(e) => setAccountAnchor(e.currentTarget)} aria-haspopup="menu" aria-label="Switch account">
+        <button className="zl-btn zl-btn--ghost" style={{ flex: 1, justifyContent: 'flex-start', padding: '0 4px', height: 36, minWidth: 0, gap: 8 }} onClick={(e) => setAccountAnchor(e.currentTarget)} aria-haspopup="menu" aria-label="Switch account" data-keep-drawer>
           <Avatar name={account.name} picture={account.picture} />
           <span className="zl-account-id" style={{ textAlign: 'left' }}><strong>{account.name}</strong><small>{account.email}</small></span>
           <Icon name="chevDown" size={12} />
@@ -161,7 +178,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
       </div>
       {/* Outside the scroll area so it is always reachable. */}
       {data.views.length > 6 ? (
-        <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
+        <button className="zl-nav-item" data-keep-drawer onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
       ) : null}
 
       <div className="zl-nav-section"><span className="zl-section-label">Mail</span></div>
@@ -176,7 +193,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
           </button>
         );
       })}
-      <button className="zl-nav-item" onClick={() => setShowAllFolders((s) => !s)}>
+      <button className="zl-nav-item" data-keep-drawer onClick={() => setShowAllFolders((s) => !s)}>
         <Icon name={showAllFolders ? 'chevUp' : 'chevDown'} className="zl-icon--lg" /><span>{showAllFolders ? 'Less' : 'More'}</span>
       </button>
 
