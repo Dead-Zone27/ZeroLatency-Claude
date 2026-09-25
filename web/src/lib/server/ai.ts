@@ -168,3 +168,62 @@ export function suggestAutoLabel(t: ThreadDetail): Promise<{ name: string; descr
     ],
   });
 }
+
+// ---------- Summary cards ----------
+
+const CardSchema = z.object({
+  cards: z.array(z.object({
+    threadId: z.string(),
+    summary: z.string(),
+    replies: z.array(z.object({ label: z.string(), body: z.string() })),
+  })),
+});
+export type ThreadCard = z.infer<typeof CardSchema>['cards'][number];
+
+/** One short summary and up to three quick replies per thread, for the Summary grid. Batched in one call. */
+export async function summarizeCards(threads: ThreadDetail[], me: { name: string; email: string }): Promise<ThreadCard[]> {
+  if (!threads.length) return [];
+  const ids = new Set(threads.map((t) => t.id));
+  const items = threads.map((t) => `<thread id="${t.id}">\n${threadForPrompt(t, 1800)}\n</thread>`).join('\n\n');
+  const r = await chatJson({
+    schemaName: 'summary_cards',
+    validator: CardSchema,
+    maxTokens: 6000,
+    jsonSchema: {
+      type: 'object', additionalProperties: false, required: ['cards'],
+      properties: {
+        cards: {
+          type: 'array',
+          items: {
+            type: 'object', additionalProperties: false, required: ['threadId', 'summary', 'replies'],
+            properties: {
+              threadId: { type: 'string', enum: threads.map((t) => t.id) },
+              summary: { type: 'string', description: 'One or two plain sentences (max ~35 words): what it is about and what, if anything, is asked of the user.' },
+              replies: {
+                type: 'array',
+                description: 'Zero to three distinct quick replies. Empty when no reply is expected (newsletters, notifications, receipts, automated mail).',
+                items: {
+                  type: 'object', additionalProperties: false, required: ['label', 'body'],
+                  properties: {
+                    label: { type: 'string', description: 'Button text, 1 to 4 words, e.g. "Sounds good", "Can we move it?".' },
+                    body: { type: 'string', description: 'The full reply, 1 to 3 short sentences, first person, no greeting line or signature.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    messages: [
+      { role: 'system', content: `You triage email for ${me.name || me.email} <${me.email}>. For every thread, write a very short summary and suggest quick replies they could send to the latest message, in the language of the thread. Replies must not invent facts, dates or commitments beyond what the thread supports. ${GUARD}` },
+      { role: 'user', content: items },
+    ],
+  });
+  const seen = new Set<string>();
+  return r.cards.filter((c) => ids.has(c.threadId) && !seen.has(c.threadId) && seen.add(c.threadId)).map((c) => ({
+    threadId: c.threadId,
+    summary: c.summary.trim(),
+    replies: c.replies.filter((x) => x.label.trim() && x.body.trim()).slice(0, 3).map((x) => ({ label: x.label.trim(), body: x.body.trim() })),
+  }));
+}

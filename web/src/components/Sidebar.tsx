@@ -115,6 +115,10 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
 
       {/* The primary Inbox sits on its own above the Views list, which scrolls independently. */}
       {pinnedView ? renderView(pinnedView, 0, true) : null}
+      <button className="zl-nav-item" aria-current={nav.kind === 'summary' ? 'page' : undefined} onClick={() => navigate({ kind: 'summary', id: 'inbox' })}>
+        <Glyph name="layers" ink="purple" />
+        <span>Summary</span>
+      </button>
       <div className="zl-nav-section">
         <span className="zl-section-label">Views</span>
         <IconButton icon="plus" label="New view" size="sm" onClick={(e) => setNewViewAnchor(e.currentTarget)} />

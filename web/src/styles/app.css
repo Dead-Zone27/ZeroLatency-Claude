@@ -59,7 +59,7 @@ a { color: inherit; }
 .zl-message.is-collapsed { cursor: pointer; }
 .zl-message.is-collapsed .zl-message-head { margin-bottom: 0; }
 .zl-message-snip { font-size: var(--text-sm); color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.zl-mail-frame { width: 100%; border: 0; display: block; background: #fff; border-radius: var(--radius-md); min-height: 40px; }
+.zl-mail-frame { width: 100%; border: 0; display: block; background: transparent; border-radius: var(--radius-md); min-height: 40px; }
 .zl-mail-text { white-space: pre-wrap; word-break: break-word; font-size: var(--text-base); line-height: 1.6; }
 .zl-attachments { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
 .zl-attachment { display: inline-flex; align-items: center; gap: var(--space-2); height: 36px; max-width: 280px; padding: 0 var(--space-3); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); background: var(--bg); color: var(--text); text-decoration: none; font-size: var(--text-sm); }
@@ -203,3 +203,28 @@ a { color: inherit; }
 @media (max-height: 520px) { .zl-app-root .zl-sidebar { overflow-y: auto; } .zl-app-root .zl-sidebar > .zl-nav-scroll { flex: none; overflow: visible; } }
 
 .zl-nav-item.is-dragging { opacity: 0.5; }
+
+/* ---------- Summary: the Inbox as a card grid ---------- */
+.zl-card-grid { list-style: none; margin: 0; padding: var(--space-3) var(--space-4) var(--space-6); display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-3); }
+.zl-card-grid > li { display: grid; min-width: 0; }
+.zl-mail-card { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-3) var(--space-4) var(--space-3); border-radius: var(--radius-xl); background: var(--bg); border: 1px solid var(--border); box-shadow: var(--shadow-xs); cursor: pointer; outline: none; transition: box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard); }
+.zl-mail-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); transform: translateY(-1px); }
+.zl-mail-card:focus-visible { box-shadow: 0 0 0 2px var(--focus-ring); }
+.zl-mail-card.is-open { border-color: var(--accent); }
+.zl-mail-card-head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; font-size: var(--text-sm); color: var(--text-muted); }
+.zl-mail-card-head .zl-monogram { width: 22px; height: 22px; border-radius: var(--radius-full); }
+.zl-mail-card-from { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--text); }
+.zl-mail-card-from small { margin-left: 5px; color: var(--text-placeholder); font-weight: 400; }
+.zl-mail-card-head time { flex: none; color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.zl-mail-card-title { display: flex; align-items: baseline; gap: 6px; margin: 0; font-size: var(--text-md); line-height: 1.35; font-weight: 500; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.zl-mail-card.is-unread .zl-mail-card-title { font-weight: 600; }
+.zl-mail-card-title .zl-row-dot { display: inline-block; margin-right: 6px; vertical-align: middle; background: var(--accent); }
+.zl-mail-card-summary { flex: 1; margin: 0; font-size: var(--text-sm); line-height: 1.5; color: var(--text-muted); overflow-wrap: anywhere; }
+/* Quick replies: centred, equally spaced along the bottom of the card. */
+.zl-mail-card-replies { display: flex; justify-content: space-evenly; align-items: center; gap: 0; margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.zl-mail-card-replies .zl-btn { flex: 0 1 auto; min-width: 0; max-width: 100%; padding: 0 var(--space-2\.5); border-radius: var(--radius-full); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zl-skeleton { display: grid; gap: 6px; padding-top: 2px; }
+.zl-skeleton > span { height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--surface-hover) 0%, var(--border) 50%, var(--surface-hover) 100%); background-size: 200% 100%; animation: zl-shimmer 1.2s linear infinite; }
+.zl-skeleton > span:nth-child(2) { width: 92%; } .zl-skeleton > span:nth-child(3) { width: 60%; }
+@keyframes zl-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.zl-workspace.has-side--thread .zl-card-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }

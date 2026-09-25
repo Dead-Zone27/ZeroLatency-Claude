@@ -66,6 +66,7 @@ export const api = {
   aiWrite: (b: { prompt: string; draft: string; subject: string; to: string[]; threadId?: string; context?: string }) => post<{ body: string }>('/api/ai/write', b),
   aiAutoLabel: (rules: { id: string; name: string; description: string; labelId: string }[], threads: Pick<ThreadSummary, 'id' | 'subject' | 'snippet' | 'participants'>[], apply = true) =>
     post<{ assignments: Record<string, string[]>; processed: string[] }>('/api/ai/autolabel', { rules, threads, apply }),
+  aiCards: (threadIds: string[]) => post<{ cards: { threadId: string; historyId: string; summary: string; replies: { label: string; body: string }[] }[] }>('/api/ai/cards', { threadIds }),
   aiSuggestLabel: (threadId: string) => post<{ name: string; description: string }>('/api/ai/suggest-label', { threadId }),
 };
 

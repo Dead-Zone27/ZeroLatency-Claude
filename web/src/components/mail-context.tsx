@@ -28,7 +28,8 @@ export interface ComposeInit {
 }
 
 export interface NavTarget {
-  kind: 'view' | 'folder' | 'search';
+  /** `summary` is the card grid of the primary Inbox. */
+  kind: 'view' | 'folder' | 'search' | 'summary';
   id: string;
 }
 

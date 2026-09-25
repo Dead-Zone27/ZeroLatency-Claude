@@ -74,3 +74,11 @@
   .zl-btn:active:not(:disabled), .zl-nav-item:active { transform: none; }
   .zl-list > li { animation-delay: 0ms !important; }
 }
+
+/* Summary cards fade in with the same light stagger as rows. */
+.zl-card-grid > li { animation: zl-content-in var(--duration-slower) var(--ease-enter) both; }
+.zl-card-grid > li:nth-child(2) { animation-delay: 25ms; } .zl-card-grid > li:nth-child(3) { animation-delay: 50ms; }
+.zl-card-grid > li:nth-child(4) { animation-delay: 75ms; } .zl-card-grid > li:nth-child(5) { animation-delay: 100ms; }
+.zl-card-grid > li:nth-child(n+6) { animation-delay: 125ms; }
+.zl-mail-card-summary, .zl-mail-card-replies { animation: zl-fade-in var(--duration-slower) var(--ease-enter); }
+@media (prefers-reduced-motion: reduce) { .zl-mail-card:hover { transform: none; } .zl-card-grid > li { animation-delay: 0ms !important; } }
