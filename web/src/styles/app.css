@@ -16,9 +16,12 @@ a { color: inherit; }
 
 /* Right-side tab: one card at a time (thread or edit view), lifted over the list with a rounded top-left corner. */
 .zl-sidepane { grid-column: 2; grid-row: 1; position: relative; z-index: 1; display: grid; min-width: 0; min-height: 0; margin-top: 5px; background: var(--bg); border: 1px solid var(--border); border-right: 0; border-bottom: 0; border-top-left-radius: var(--radius-2xl); box-shadow: -10px 0 28px -18px rgb(0 0 0 / 0.28); overflow: hidden; }
-.zl-sidepane > .zl-peek, .zl-sidepane > .zl-panel { border-left: 0; width: auto; min-height: 0; }
-.zl-sidepane > .zl-peek { grid-template-rows: 32px 1fr; }
-.zl-sidepane > .zl-panel { padding-top: 0; }
+.zl-sidepane-layer { grid-area: 1 / 1; display: grid; min-width: 0; min-height: 0; background: var(--bg); }
+.zl-sidepane-layer.is-leaving { pointer-events: none; z-index: 0; }
+.zl-sidepane-layer:not(.is-leaving) { z-index: 1; }
+.zl-sidepane-layer > .zl-peek, .zl-sidepane-layer > .zl-panel { border-left: 0; width: auto; min-height: 0; }
+.zl-sidepane-layer > .zl-peek { grid-template-rows: 32px 1fr; }
+.zl-sidepane-layer > .zl-panel { padding-top: 0; }
 .zl-sidepane .zl-panel-head { height: 32px; }
 /* Every top bar (sidebar account row, list header, right tab header) is centred on the same line: half the header height. */
 .zl-app-root .zl-sidebar { padding-top: 0; }
@@ -40,14 +43,20 @@ a { color: inherit; }
 .zl-searchbar input::placeholder { color: var(--text-placeholder); }
 .zl-inline-name { border: 0; outline: none; background: var(--surface-input); border-radius: var(--radius-sm); padding: 2px 6px; font: inherit; font-weight: 500; color: var(--text); width: 220px; }
 
-/* Thread tab open: the list narrows to subject + date, as in the reference. */
-.zl-workspace.has-side--thread .zl-row { grid-template-columns: 20px 8px minmax(0, 1fr) auto; }
-.zl-workspace.has-side--thread .zl-row .zl-row-from, .zl-workspace.has-side--thread .zl-row .zl-row-meta { display: none; }
-.zl-workspace.has-side--thread .zl-row .zl-row-time { grid-column: 4; }
-.zl-workspace.has-side--thread .zl-row .zl-row-actions { display: none; }
-.zl-workspace.has-side--thread .zl-row:hover .zl-row-actions { display: flex; grid-column: 4; }
-.zl-workspace.has-side--thread .zl-group { padding-left: 36px; }
-.zl-workspace.has-side--thread .zl-viewbar .zl-btn--secondary { display: none; }
+/* A narrow list (e.g. next to an open thread) shows subject + date only, as in the reference. Driven by the list's
+   own width, so it changes once at a natural point while the side tab animates, never mid-way through a class swap. */
+.zl-listpane { container: list / inline-size; }
+@media (min-width: 768px) {
+  @container list (max-width: 720px) {
+    .zl-row { grid-template-columns: 20px 8px minmax(0, 1fr) auto; }
+    .zl-row .zl-row-from, .zl-row .zl-row-meta { display: none; }
+    .zl-row .zl-row-time { grid-column: 4; }
+    .zl-row .zl-row-actions { display: none; }
+    .zl-row:hover .zl-row-actions { display: flex; grid-column: 4; }
+    .zl-group { padding-left: 36px; }
+    .zl-viewbar .zl-btn--secondary { display: none; }
+  }
+}
 
 /* Thread view */
 .zl-peek { min-height: 0; }
@@ -228,3 +237,30 @@ a { color: inherit; }
 .zl-skeleton > span:nth-child(2) { width: 92%; } .zl-skeleton > span:nth-child(3) { width: 60%; }
 @keyframes zl-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .zl-workspace.has-side--thread .zl-card-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+/* ---------- View actions ---------- */
+.zl-btn--danger-solid { background: var(--danger-text); color: #fff; }
+.zl-btn--danger-solid:hover:not(:disabled) { filter: brightness(1.08); }
+.zl-btn--danger-solid:disabled { opacity: 0.5; cursor: not-allowed; }
+.zl-menu-item--danger { color: var(--danger-text); }
+.zl-menu-item--danger .zl-icon { color: var(--danger-text); }
+/* Inline rename in the sidebar keeps the nav item's exact size so nothing shifts. */
+.zl-nav-rename { display: flex; align-items: center; gap: var(--space-2); height: var(--size-nav-item-height); padding: 0 var(--space-1) 0 var(--space-2); border-radius: var(--radius-md); background: var(--surface-selected); box-shadow: inset 0 0 0 1px var(--focus-ring); }
+.zl-nav-rename input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; font: inherit; font-weight: 500; color: var(--text); padding: 0; }
+/* Header title: pencil next to the name to rename in place. */
+.zl-viewbar-title .zl-title-edit { --h: 24px; opacity: 0.55; transition: opacity var(--duration-base) var(--ease-standard); }
+.zl-viewbar-title:hover .zl-title-edit, .zl-viewbar-title .zl-title-edit:focus-visible { opacity: 1; }
+.zl-inline-name { box-shadow: inset 0 0 0 1px var(--focus-ring); }
+
+/* ---------- Search ---------- */
+.zl-searchbar { position: relative; z-index: var(--z-dropdown); }
+.zl-search-suggest { position: absolute; top: calc(100% - 4px); left: var(--space-3); right: var(--space-3); display: grid; gap: 2px; padding: var(--space-2); border-radius: var(--radius-xl); background: var(--surface-raised); box-shadow: var(--shadow-lg); animation: zl-pop-in var(--duration-slow) var(--ease-enter); }
+.zl-search-chips { display: flex; flex-wrap: wrap; gap: var(--space-1\.5); padding: var(--space-1) var(--space-1) var(--space-2); }
+.zl-search-chip { cursor: pointer; border: 0; font: inherit; font-size: var(--text-sm); height: 26px; padding: 0 var(--space-2\.5); border-radius: var(--radius-full); background: var(--surface-hover); color: var(--text-muted); }
+.zl-search-chip:hover { color: var(--text); background: var(--surface-selected); }
+.zl-search-chip[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.zl-search-suggest .zl-menu-item { padding-right: 2px; }
+.zl-search-recent { flex: 1; display: flex; align-items: center; gap: var(--space-2); min-width: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zl-search-recent .zl-icon { color: var(--text-subtle); flex: none; }
+.zl-search-hint { padding: var(--space-2) var(--space-2) var(--space-1); font-size: var(--text-xs); color: var(--text-subtle); border-top: 1px solid var(--border); margin-top: var(--space-1); }
+.zl-search-hint code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.95em; color: var(--text-muted); }

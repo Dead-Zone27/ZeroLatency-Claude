@@ -119,7 +119,8 @@ function GroupBlock({ id, title, monogram, children }: { id: string; title: stri
 }
 
 function ViewHeader({ allSelected, someSelected, onSelectAll, onOpenSidebar }: { allSelected: boolean; someSelected: boolean; onSelectAll: (v: boolean) => void; onOpenSidebar: () => void }) {
-  const { nav, activeView, refreshList, openEditView, openAutoLabel } = useMail();
+  const { nav, navigate, activeView, refreshList, openEditView, openAutoLabel } = useMail();
+  const { views } = useAccountData();
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [groupAnchor, setGroupAnchor] = useState<HTMLElement | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -137,11 +138,17 @@ function ViewHeader({ allSelected, someSelected, onSelectAll, onOpenSidebar }: {
             <Glyph name={activeView.glyph} ink={activeView.ink} />
             {renaming ? (
               <input className="zl-inline-name" autoFocus defaultValue={activeView.name} aria-label="View name"
+                onFocus={(e) => e.currentTarget.select()} maxLength={80}
                 onBlur={(e) => { const name = e.target.value.trim(); if (name) updateView(activeView.id, (v) => ({ ...v, name })); setRenaming(false); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRenaming(false); }} />
-            ) : <span onDoubleClick={() => setRenaming(true)} title="Double-click to rename">{activeView.name}</span>}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { e.currentTarget.value = activeView.name; setRenaming(false); } }} />
+            ) : (
+              <>
+                <span onDoubleClick={() => setRenaming(true)} title="Double-click to rename">{activeView.name}</span>
+                <IconButton icon="pen" label="Rename view" size="sm" className="zl-title-edit" onClick={() => setRenaming(true)} />
+              </>
+            )}
           </>
-        ) : folder ? (<><Icon name={folder.icon} className="zl-icon--lg" /><span>{folder.name}</span></>) : (<><Icon name="search" className="zl-icon--lg" /><span>Search: {nav.id}</span></>)}
+        ) : folder ? (<><Icon name={folder.icon} className="zl-icon--lg" /><span>{folder.name}</span></>) : (<><Icon name="search" className="zl-icon--lg" /><span>Search: {nav.id}</span><IconButton icon="x" label="Clear search" size="sm" onClick={() => navigate({ kind: 'view', id: views[0]?.id ?? '' })} /></>)}
       </h1>
       <div className="zl-viewbar-tools">
         {activeView ? (
@@ -174,16 +181,91 @@ function ViewShortcuts({ onFilter, onEdit }: { onFilter: () => void; onEdit: () 
   return null;
 }
 
+const RECENT_KEY = 'zl:v1:recent-searches';
+const QUICK_FILTERS: { label: string; op: string }[] = [
+  { label: 'Unread', op: 'is:unread' },
+  { label: 'Starred', op: 'is:starred' },
+  { label: 'Has attachment', op: 'has:attachment' },
+  { label: 'From me', op: 'from:me' },
+  { label: 'Last 7 days', op: 'newer_than:7d' },
+];
+
+function readRecent(): string[] {
+  try { return (JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 6); } catch { return []; }
+}
+function saveRecent(list: string[]) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 6))); } catch { /* storage blocked */ }
+}
+
+/**
+ * Search field that replaces the header. Closes when focus leaves it (or on Escape); shows recent searches and
+ * quick Gmail filters while focused, with arrow-key navigation.
+ */
 function SearchBar({ onClose }: { onClose: () => void }) {
   const { nav, navigate } = useMail();
   const [q, setQ] = useState(nav.kind === 'search' ? nav.id : '');
+  const [recent, setRecent] = useState<string[]>(() => (typeof window === 'undefined' ? [] : readRecent()));
+  const [active, setActive] = useState(-1);
+  const input = useRef<HTMLInputElement>(null);
+
+  const matches = recent.filter((r) => !q.trim() || (r.toLowerCase().includes(q.trim().toLowerCase()) && r !== q.trim()));
+  const run = (value: string) => {
+    const v = value.trim();
+    if (!v) return;
+    const next = [v, ...recent.filter((r) => r !== v)];
+    setRecent(next); saveRecent(next);
+    navigate({ kind: 'search', id: v });
+    onClose();
+  };
+  const addOp = (op: string) => {
+    setQ((cur) => (cur.split(/\s+/).includes(op) ? cur : `${cur.trim()} ${op}`.trim() + ' '));
+    input.current?.focus();
+  };
+  const remove = (r: string) => { const next = recent.filter((x) => x !== r); setRecent(next); saveRecent(next); };
+
   return (
-    <form className="zl-searchbar" role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim()) navigate({ kind: 'search', id: q.trim() }); }}>
+    <form
+      className="zl-searchbar"
+      role="search"
+      onSubmit={(e) => { e.preventDefault(); run(active >= 0 && matches[active] ? matches[active]! : q); }}
+      // Close as soon as focus moves anywhere outside the search bar (and its suggestions).
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onClose(); }}
+    >
       <Icon name="search" className="zl-icon--lg" />
-      <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search mail (Gmail operators work: from:, has:attachment, older_than:…)" aria-label="Search mail"
-        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }} />
-      <button type="submit" className="zl-btn zl-btn--primary" disabled={!q.trim()}>Search</button>
-      <IconButton icon="x" label="Close search" onClick={onClose} />
+      <input
+        ref={input}
+        autoFocus
+        value={q}
+        onChange={(e) => { setQ(e.target.value); setActive(-1); }}
+        placeholder="Search mail"
+        aria-label="Search mail"
+        role="combobox"
+        aria-expanded={true}
+        aria-controls="zl-search-suggest"
+        aria-activedescendant={active >= 0 ? `zl-recent-${active}` : undefined}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+          if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(i + 1, matches.length - 1)); }
+          if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(i - 1, -1)); }
+        }}
+      />
+      {q ? <IconButton icon="x" label="Clear" size="sm" onClick={() => { setQ(''); input.current?.focus(); }} /> : null}
+      <button type="submit" className="zl-btn zl-btn--primary zl-btn--sm" disabled={!q.trim()}>Search</button>
+      <div className="zl-search-suggest" id="zl-search-suggest" role="listbox" aria-label="Search suggestions" onMouseDown={(e) => { if ((e.target as HTMLElement).tagName !== 'INPUT') e.preventDefault(); }}>
+        <div className="zl-search-chips">
+          {QUICK_FILTERS.map((f) => (
+            <button key={f.op} type="button" className="zl-tag zl-search-chip" aria-pressed={q.split(/\s+/).includes(f.op)} onClick={() => addOp(f.op)}>{f.label}</button>
+          ))}
+        </div>
+        {matches.length ? <div className="zl-menu-label">Recent</div> : null}
+        {matches.map((r, i) => (
+          <div key={r} id={`zl-recent-${i}`} role="option" aria-selected={i === active} className={`zl-menu-item${i === active ? ' is-focus' : ''}`} onMouseEnter={() => setActive(i)}>
+            <button type="button" className="zl-search-recent" onClick={() => run(r)}><Icon name="clock" />{r}</button>
+            <IconButton icon="x" label={`Remove “${r}” from recent searches`} size="sm" onClick={() => remove(r)} />
+          </div>
+        ))}
+        <div className="zl-search-hint">Gmail operators work: <code>from:</code> <code>to:</code> <code>subject:</code> <code>has:attachment</code> <code>older_than:</code> <code>label:</code></div>
+      </div>
     </form>
   );
 }

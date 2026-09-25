@@ -68,6 +68,16 @@ interface ListState {
   error: string | null;
 }
 
+type PanelState = { viewId: string; step: 'root' | 'properties' | 'filters' | 'hover' };
+type SideDesc = { kind: 'thread'; threadId: string } | { kind: 'panel'; panel: PanelState } | null;
+
+function sameSide(a: SideDesc, b: SideDesc): boolean {
+  if (!a || !b) return a === b;
+  if (a.kind === 'thread' && b.kind === 'thread') return a.threadId === b.threadId;
+  if (a.kind === 'panel' && b.kind === 'panel') return a.panel === b.panel;
+  return false;
+}
+
 function navFromUrl(): { nav: NavTarget | null; thread: string | null } {
   const p = new URLSearchParams(window.location.search);
   const v = p.get('view'), f = p.get('folder'), s = p.get('q');
@@ -378,7 +388,23 @@ function App({ session }: { session: SessionInfo }) {
     const withKey = { ...init, key: ++composeSeq.current };
     if (init.inline) setInline(withKey); else setFloating(withKey);
   }, []);
-  const [panel, setPanel] = useState<{ viewId: string; step: 'root' | 'properties' | 'filters' | 'hover' } | null>(null);
+  const [panel, setPanel] = useState<PanelState | null>(null);
+
+  // ---------- right-side tab transitions ----------
+  // What the tab shows now, and what it showed before a switch/close, so the old content can fade out while the
+  // column resizes and the new content fades in (instead of both snapping at once).
+  const currentSide: SideDesc = openThreadId && settings.threadStyle === 'side' ? { kind: 'thread', threadId: openThreadId } : panel ? { kind: 'panel', panel } : null;
+  const [shownSide, setShownSide] = useState<SideDesc>(currentSide);
+  const [leavingSide, setLeavingSide] = useState<SideDesc>(null);
+  if (!sameSide(shownSide, currentSide)) {
+    if (shownSide && shownSide.kind !== currentSide?.kind) setLeavingSide(shownSide);
+    setShownSide(currentSide);
+  }
+  useEffect(() => {
+    if (!leavingSide) return;
+    const t = window.setTimeout(() => setLeavingSide(null), 420);
+    return () => window.clearTimeout(t);
+  }, [leavingSide]);
   const [settingsOpen, setSettingsOpen] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [autoLabelSeed, setAutoLabelSeed] = useState<{ name?: string; description?: string } | null>(null);
@@ -433,24 +459,29 @@ function App({ session }: { session: SessionInfo }) {
   const full = openThreadId && settings.threadStyle === 'full';
   const center = openThreadId && settings.threadStyle === 'center';
   const side: 'thread' | 'panel' | null = peek ? 'thread' : panel ? 'panel' : null;
-  const threadView = openThreadId ? (
+  const renderThread = (id: string) => (
     <ThreadView
-      key={openThreadId}
-      threadId={openThreadId}
-      summary={list.threads.find((t) => t.id === openThreadId) ?? null}
+      key={id}
+      threadId={id}
+      summary={list.threads.find((t) => t.id === id) ?? null}
       mode={settings.threadStyle}
       onClose={() => setOpenThreadId(null)}
-      inlineCompose={inline && inline.threadId === openThreadId ? inline : null}
+      inlineCompose={inline && inline.threadId === id ? inline : null}
       onCloseInline={() => setInline(null)}
     />
-  ) : null;
+  );
+  const threadView = openThreadId ? renderThread(openThreadId) : null;
+  const renderSide = (d: NonNullable<SideDesc>) => d.kind === 'thread'
+    ? renderThread(d.threadId)
+    : <EditViewPanel key={d.panel.viewId} viewId={d.panel.viewId} step={d.panel.step} setStep={(step) => setPanel({ ...d.panel, step })} onClose={() => setPanel(null)} />;
+  const leaving = leavingSide && leavingSide.kind !== currentSide?.kind ? leavingSide : null;
 
   return (
     <MailContext.Provider value={ctx}>
       <div className={`zl-app-root${mobileSidebar ? ' show-sidebar' : ''}`} onClick={(e) => { if (mobileSidebar && (e.target as HTMLElement).closest('.zl-nav-item')) setMobileSidebar(false); }}>
         <Sidebar onSearch={() => { setSearchOpen(true); setMobileSidebar(false); }} />
         <div className={`zl-workspace${side ? ` has-side has-side--${side}` : ''}`}>
-          {full ? <div className="zl-full" style={{ display: 'grid', minHeight: 0 }}>{threadView}</div> : nav.kind === 'summary' ? (
+          {full ? <div className="zl-full" style={{ display: 'grid', minHeight: 0 }}>{threadView}</div> : nav.kind === 'summary' && !searchOpen ? (
             <SummaryGrid state={list} onLoadMore={loadMore} onRetry={() => loadList(query)} onOpenSidebar={() => setMobileSidebar(true)} />
           ) : (
             <ListPane
@@ -464,10 +495,14 @@ function App({ session }: { session: SessionInfo }) {
               onOpenSidebar={() => setMobileSidebar(true)}
             />
           )}
-          {side ? (
-            // Keyed by kind: switching threads keeps the tab in place; switching tab kind slides the new one in.
-            <aside className="zl-sidepane" key={side}>
-              {side === 'thread' ? threadView : panel ? <EditViewPanel key={panel.viewId} viewId={panel.viewId} step={panel.step} setStep={(step) => setPanel({ ...panel, step })} onClose={() => setPanel(null)} /> : null}
+          {currentSide || leaving ? (
+            // One tab card; its content layers cross-fade when switching between a thread and Edit view.
+            <aside className={`zl-sidepane${currentSide ? '' : ' is-closing'}`}>
+              {/* One keyed array so a layer keeps its state (no refetch) when it becomes the leaving one. */}
+              {[
+                leaving ? <div key={leaving.kind} className="zl-sidepane-layer is-leaving" aria-hidden inert>{renderSide(leaving)}</div> : null,
+                currentSide ? <div key={currentSide.kind} className="zl-sidepane-layer">{renderSide(currentSide)}</div> : null,
+              ]}
             </aside>
           ) : null}
         </div>

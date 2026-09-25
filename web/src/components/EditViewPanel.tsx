@@ -1,11 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { updateAccount, updateView, useAccountData, type PropertyDef, type PropertyOption, type PropertyType } from '@/lib/client/store';
+import { duplicateView, updateAccount, updateView, useAccountData, type PropertyDef, type PropertyOption, type PropertyType } from '@/lib/client/store';
 import { ALL_HOVER_ACTIONS, BUILTIN_PROPS, INKS, uid, type HoverAction, type Ink, type View } from '@/lib/shared/views';
 import { Glyph, Icon, StatusDot } from './icons';
 import { IconButton, Toggle } from './ui';
 import { useMail } from './mail-context';
 import { GlyphPicker } from './NewViewMenu';
+import { DeleteViewDialog } from './ViewMenu';
 import { FilterMenu, describeRule } from './FilterMenu';
 import { GroupByMenu } from './GroupByMenu';
 
@@ -50,6 +51,7 @@ export function EditViewPanel({ viewId, step, setStep, onClose }: { viewId: stri
   const { labels, navigate } = useMail();
   const view = data.views.find((v) => v.id === viewId);
   const [glyphAnchor, setGlyphAnchor] = useState<HTMLElement | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [groupAnchor, setGroupAnchor] = useState<HTMLElement | null>(null);
   const [propStep, setPropStep] = useState<{ kind: 'add' } | { kind: 'edit'; id: string } | null>(null);
@@ -146,17 +148,12 @@ export function EditViewPanel({ viewId, step, setStep, onClose }: { viewId: stri
       <div className="zl-panel-row zl-panel-row--prop"><Icon name="bell" /><span className="zl-panel-row-text">Notifications<small>Desktop alerts for new unread mail in this view</small></span><span className="zl-panel-row-end"><Toggle checked={view.notify} label="Notifications" onChange={(v) => set((x) => ({ ...x, notify: v }))} /></span></div>
       <div className="zl-panel-foot" style={{ gap: 8 }}>
         <button className="zl-btn zl-btn--ghost" onClick={() => {
-          const copy: View = { ...view, id: uid('v_'), name: `${view.name} copy`, filters: view.filters.map((f) => ({ ...f, id: uid('f_') })) };
-          updateAccount((d) => ({ ...d, views: [...d.views, copy], properties: { ...d.properties, [copy.id]: d.properties[view.id] ?? [] } }));
-          navigate({ kind: 'view', id: copy.id });
+          navigate({ kind: 'view', id: duplicateView(view) });
           onClose();
         }}><Icon name="plus" />Duplicate</button>
-        <button className="zl-btn zl-btn--danger" onClick={() => {
-          if (!window.confirm(`Delete the view “${view.name}”? Your email is not affected.`)) return;
-          updateAccount((d) => { const properties = { ...d.properties }; delete properties[view.id]; return { ...d, views: d.views.filter((v) => v.id !== view.id), properties }; });
-          onClose();
-        }}><Icon name="trash" />Delete view</button>
+        <button className="zl-btn zl-btn--danger" onClick={() => setDeleting(true)}><Icon name="trash" />Delete view</button>
       </div>
+      {deleting ? <DeleteViewDialog view={view} onClose={() => setDeleting(false)} onDeleted={onClose} /> : null}
       {glyphAnchor ? <GlyphPicker anchor={glyphAnchor} glyph={view.glyph} ink={view.ink} onPick={(g, i) => set((v) => ({ ...v, glyph: g, ink: i }))} onClose={() => setGlyphAnchor(null)} /> : null}
       {filterAnchor ? <FilterMenu anchor={filterAnchor} view={view} onClose={() => setFilterAnchor(null)} /> : null}
       {groupAnchor ? <GroupByMenu anchor={groupAnchor} view={view} onClose={() => setGroupAnchor(null)} /> : null}

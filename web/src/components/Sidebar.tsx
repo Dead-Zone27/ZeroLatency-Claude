@@ -2,11 +2,13 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { updateAccount, useAccountData } from '@/lib/client/store';
+import { updateAccount, updateView, useAccountData } from '@/lib/client/store';
+import type { View } from '@/lib/shared/views';
 import { Glyph, Icon } from './icons';
 import { IconButton, Popover, useMenuKeys } from './ui';
 import { FOLDERS, useMail } from './mail-context';
-import { NewViewMenu } from './NewViewMenu';
+import { GlyphPicker, NewViewMenu } from './NewViewMenu';
+import { DeleteViewDialog, ViewContextMenu } from './ViewMenu';
 
 function Avatar({ name, picture }: { name: string; picture: string | null }) {
   if (picture) {
@@ -60,6 +62,10 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const [showAllFolders, setShowAllFolders] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsedViews, setCollapsedViews] = useState(false);
+  const [menu, setMenu] = useState<{ view: View; at: DOMRect; el: HTMLElement } | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [iconFor, setIconFor] = useState<{ view: View; el: HTMLElement } | null>(null);
+  const [deleting, setDeleting] = useState<View | null>(null);
 
   const [pinnedView, ...otherViews] = data.views;
   const scrollViews = collapsedViews ? otherViews.slice(0, 5) : otherViews;
@@ -78,21 +84,48 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
     });
   };
 
-  const renderView = (v: (typeof data.views)[number], i: number, pinned = false) => {
+  const openMenu = (v: View, e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault();
+    const el = e.currentTarget;
+    // Keyboard (context-menu key / Shift+F10) reports 0,0: anchor to the item instead of the pointer.
+    const at = e.clientX || e.clientY ? new DOMRect(e.clientX, e.clientY, 0, 0) : el.getBoundingClientRect();
+    setMenu({ view: v, at, el });
+  };
+
+  const renderView = (v: View, i: number, pinned = false) => {
     const active = nav.kind === 'view' && nav.id === v.id;
     const count = counts[`view:${v.id}`];
+    if (renamingId === v.id) {
+      const done = (name: string | null) => {
+        const trimmed = name?.trim();
+        if (trimmed && trimmed !== v.name) updateView(v.id, (x) => ({ ...x, name: trimmed.slice(0, 80) }));
+        setRenamingId(null);
+      };
+      return (
+        <div key={v.id} className="zl-nav-rename">
+          <Glyph name={v.glyph} ink={v.ink} />
+          <input autoFocus defaultValue={v.name} aria-label="View name" maxLength={80}
+            onFocus={(e) => e.currentTarget.select()}
+            onBlur={(e) => done(e.currentTarget.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.preventDefault(); done(null); } }} />
+        </div>
+      );
+    }
     return (
       <button
         key={v.id}
-        className={`zl-nav-item${dragId === v.id ? ' is-dragging' : ''}`}
+        className={`zl-nav-item${dragId === v.id ? ' is-dragging' : ''}${menu?.view.id === v.id ? ' is-hover' : ''}`}
         aria-current={active ? 'page' : undefined}
         onClick={() => navigate({ kind: 'view', id: v.id })}
+        onContextMenu={(e) => openMenu(v, e)}
+        onDoubleClick={() => setRenamingId(v.id)}
         draggable={!pinned}
         onDragStart={() => setDragId(v.id)}
         onDragOver={(e) => e.preventDefault()}
         onDrop={() => { if (!pinned) reorder(v.id); setDragId(null); }}
         onDragEnd={() => setDragId(null)}
         aria-label={`${v.name}${count ? `, ${count} unread` : ''}${i < 9 ? `, shortcut ${i + 1}` : ''}`}
+        aria-haspopup="menu"
       >
         <Glyph name={v.glyph} ink={v.ink} />
         <span>{v.name}</span>
@@ -155,6 +188,18 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
 
       {accountAnchor ? <AccountMenu anchor={accountAnchor} onClose={() => setAccountAnchor(null)} /> : null}
       {newViewAnchor ? <NewViewMenu anchor={newViewAnchor} onClose={() => setNewViewAnchor(null)} /> : null}
+      {menu ? (
+        <ViewContextMenu
+          view={menu.view}
+          at={menu.at}
+          onRename={() => setRenamingId(menu.view.id)}
+          onChangeIcon={() => setIconFor({ view: menu.view, el: menu.el })}
+          onDelete={() => setDeleting(menu.view)}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
+      {iconFor ? <GlyphPicker anchor={iconFor.el} glyph={iconFor.view.glyph} ink={iconFor.view.ink} onPick={(g, ink) => updateView(iconFor.view.id, (x) => ({ ...x, glyph: g, ink }))} onClose={() => setIconFor(null)} /> : null}
+      {deleting ? <DeleteViewDialog view={deleting} onClose={() => setDeleting(null)} /> : null}
     </nav>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useSyncExternalStore } from 'react';
-import type { Ink, View } from '../shared/views';
+import { uid, type Ink, type View } from '../shared/views';
 
 // ---------- Types ----------
 
@@ -162,4 +162,25 @@ export function updateSettings(patch: Partial<Settings>) {
 
 export function updateView(id: string, fn: (v: View) => View) {
   updateAccount((d) => ({ ...d, views: d.views.map((v) => (v.id === id ? fn(v) : v)) }));
+}
+
+/** Copies a view (with fresh ids and its properties) and returns the copy's id. */
+export function duplicateView(view: View): string {
+  const copy: View = { ...view, id: uid('v_'), name: `${view.name} copy`, filters: view.filters.map((f) => ({ ...f, id: uid('f_') })) };
+  updateAccount((d) => {
+    const at = d.views.findIndex((v) => v.id === view.id);
+    const views = [...d.views];
+    views.splice(at < 0 ? views.length : at + 1, 0, copy);
+    return { ...d, views, properties: { ...d.properties, [copy.id]: d.properties[view.id] ?? [] } };
+  });
+  return copy.id;
+}
+
+/** Removes a view and its properties. Mail is not touched. */
+export function deleteView(id: string) {
+  updateAccount((d) => {
+    const properties = { ...d.properties };
+    delete properties[id];
+    return { ...d, views: d.views.filter((v) => v.id !== id), properties };
+  });
 }
