@@ -23,10 +23,3 @@ export function useThreadGroups(): ThreadGroup[] {
     });
   }, [threads, view, nav, me, labels, data.properties, data.values]);
 }
-
-export const REVEAL_GROUP_EVENT = 'zl:reveal-group';
-
-/** Asks the list to expand a group (if collapsed) and scroll it into view. */
-export function revealGroup(key: string) {
-  window.dispatchEvent(new CustomEvent<string>(REVEAL_GROUP_EVENT, { detail: key }));
-}

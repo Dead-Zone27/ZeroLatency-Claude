@@ -46,7 +46,6 @@
 
 /* ---------- Thread ---------- */
 .zl-peek-body, .zl-thread-full { animation: zl-content-in var(--duration-slow) var(--ease-enter) both; }
-.zl-workspace.has-peek > .zl-peek { animation: zl-fade-in var(--duration-slow) var(--ease-enter); }
 .zl-message { transition: box-shadow var(--duration-base) var(--ease-standard), background-color var(--duration-base) var(--ease-standard); }
 .zl-message-body { animation: zl-fade-in var(--duration-slow) var(--ease-enter); }
 .zl-ai-card { animation: zl-content-in var(--duration-slower) var(--ease-enter) both; }
@@ -57,7 +56,7 @@
 .zl-toast { animation: zl-pop-up var(--duration-slower) var(--ease-enter); }
 .zl-composer-dock .zl-composer { animation: zl-rise-in var(--duration-slower) var(--ease-enter); transition: height var(--duration-slower) var(--ease-standard); }
 .zl-composer.is-inline { animation: zl-content-in var(--duration-slow) var(--ease-enter); }
-.zl-workspace > .zl-panel { animation: zl-slide-in-right var(--duration-slower) var(--ease-enter); }
+.zl-sidepane { animation: zl-slide-in-right var(--duration-slower) var(--ease-enter); }
 .zl-modal-host .zl-scrim, .zl-dialog-scrim, .zl-palette-scrim { animation: zl-fade-in var(--duration-slow) var(--ease-enter); }
 .zl-modal-host .zl-modal, .zl-dialog { animation: zl-modal-in var(--duration-slower) var(--ease-enter); }
 .zl-palette { animation: zl-pop-in var(--duration-slow) var(--ease-enter); }

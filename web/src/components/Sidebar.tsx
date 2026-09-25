@@ -7,7 +7,6 @@ import { Glyph, Icon } from './icons';
 import { IconButton, Popover, useMenuKeys } from './ui';
 import { FOLDERS, useMail } from './mail-context';
 import { NewViewMenu } from './NewViewMenu';
-import { revealGroup, useThreadGroups } from './use-groups';
 
 function Avatar({ name, picture }: { name: string; picture: string | null }) {
   if (picture) {
@@ -61,11 +60,9 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const [showAllFolders, setShowAllFolders] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsedViews, setCollapsedViews] = useState(false);
-  // Views whose group list the user folded away. The active view's groups show by default, as in the reference.
-  const [foldedViews, setFoldedViews] = useState<Set<string>>(() => new Set());
-  const groups = useThreadGroups().filter((g) => g.title);
 
-  const visibleViews = collapsedViews ? data.views.slice(0, 5) : data.views;
+  const [pinnedView, ...otherViews] = data.views;
+  const scrollViews = collapsedViews ? otherViews.slice(0, 5) : otherViews;
   const folders = showAllFolders ? FOLDERS : FOLDERS.filter((f) => ['all', 'sent', 'drafts', 'reminders'].includes(f.id));
 
   const reorder = (targetId: string) => {
@@ -81,6 +78,29 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
     });
   };
 
+  const renderView = (v: (typeof data.views)[number], i: number, pinned = false) => {
+    const active = nav.kind === 'view' && nav.id === v.id;
+    const count = counts[`view:${v.id}`];
+    return (
+      <button
+        key={v.id}
+        className={`zl-nav-item${dragId === v.id ? ' is-dragging' : ''}`}
+        aria-current={active ? 'page' : undefined}
+        onClick={() => navigate({ kind: 'view', id: v.id })}
+        draggable={!pinned}
+        onDragStart={() => setDragId(v.id)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={() => { if (!pinned) reorder(v.id); setDragId(null); }}
+        onDragEnd={() => setDragId(null)}
+        aria-label={`${v.name}${count ? `, ${count} unread` : ''}${i < 9 ? `, shortcut ${i + 1}` : ''}`}
+      >
+        <Glyph name={v.glyph} ink={v.ink} />
+        <span>{v.name}</span>
+        {count ? <span className="zl-nav-count">{count >= 100 ? '99+' : count}</span> : null}
+      </button>
+    );
+  };
+
   return (
     <nav className="zl-sidebar" aria-label="Mailbox">
       <div className="zl-account">
@@ -93,57 +113,15 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
       </div>
       <button className="zl-nav-item" onClick={onSearch}><Icon name="search" className="zl-icon--lg" /><span>Search</span></button>
 
+      {/* The primary Inbox sits on its own above the Views list, which scrolls independently. */}
+      {pinnedView ? renderView(pinnedView, 0, true) : null}
       <div className="zl-nav-section">
         <span className="zl-section-label">Views</span>
         <IconButton icon="plus" label="New view" size="sm" onClick={(e) => setNewViewAnchor(e.currentTarget)} />
       </div>
-      {/* Only the views scroll; search, the Mail folders and the footer stay put. */}
       <div className="zl-nav-scroll">
-        {visibleViews.map((v, i) => {
-          const active = nav.kind === 'view' && nav.id === v.id;
-          const count = counts[`view:${v.id}`];
-          const hasGroups = active && groups.length > 0;
-          const open = hasGroups && !foldedViews.has(v.id);
-          const toggle = () => setFoldedViews((cur) => { const next = new Set(cur); if (next.has(v.id)) next.delete(v.id); else next.add(v.id); return next; });
-          return (
-            <div key={v.id} className={`zl-nav-view${dragId === v.id ? ' is-dragging' : ''}`}>
-              <div className="zl-nav-item-wrap">
-                <button
-                  className="zl-nav-item"
-                  aria-current={active ? 'page' : undefined}
-                  onClick={() => navigate({ kind: 'view', id: v.id })}
-                  draggable
-                  onDragStart={() => setDragId(v.id)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => { reorder(v.id); setDragId(null); }}
-                  onDragEnd={() => setDragId(null)}
-                  aria-label={`${v.name}${count ? `, ${count} unread` : ''}${i < 9 ? `, shortcut ${i + 1}` : ''}`}
-                >
-                  <Glyph name={v.glyph} ink={v.ink} />
-                  <span>{v.name}</span>
-                  {count ? <span className="zl-nav-count">{count >= 100 ? '99+' : count}</span> : null}
-                </button>
-                {hasGroups ? (
-                  <button className="zl-nav-disclosure" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} ${v.name} groups`} onClick={toggle}>
-                    <Icon name="chevRight" size={12} />
-                  </button>
-                ) : null}
-              </div>
-              <div className={`zl-nav-sub${open ? ' is-open' : ''}`} aria-hidden={!open}>
-                <div>
-                  {active ? groups.map((g) => (
-                    <button key={g.key} className="zl-nav-item zl-nav-item--sub" tabIndex={open ? 0 : -1} onClick={() => revealGroup(g.key)}>
-                      {g.monogram ? <span className="zl-monogram">{g.monogram}</span> : <span className="zl-nav-bullet" aria-hidden />}
-                      <span>{g.title}</span>
-                      {g.threads.some((t) => t.unread) ? <span className="zl-nav-count">{g.threads.filter((t) => t.unread).length}</span> : null}
-                    </button>
-                  )) : null}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {data.views.length > 5 ? (
+        {scrollViews.map((v, i) => renderView(v, i + 1))}
+        {data.views.length > 6 ? (
           <button className="zl-nav-item" onClick={() => setCollapsedViews((c) => !c)}><Icon name={collapsedViews ? 'chevDown' : 'chevUp'} className="zl-icon--lg" /><span>{collapsedViews ? 'More' : 'Less'}</span></button>
         ) : null}
       </div>

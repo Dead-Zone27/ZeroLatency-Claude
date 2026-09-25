@@ -2,7 +2,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { updateView, useAccountData, type PropertyDef, type PropertyValue } from '@/lib/client/store';
 import { ALL_HOVER_ACTIONS, type HoverAction } from '@/lib/shared/views';
-import { REVEAL_GROUP_EVENT, useThreadGroups } from './use-groups';
+import { useThreadGroups } from './use-groups';
 import { formatListDate, participantLabel } from '@/lib/shared/compose';
 import type { Label, ThreadSummary } from '@/lib/shared/types';
 import { Glyph, Icon, StatusDot } from './icons';
@@ -103,15 +103,6 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
 
 function GroupBlock({ id, title, monogram, children }: { id: string; title: string; monogram?: string; children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    const onReveal = (e: Event) => {
-      if ((e as CustomEvent<string>).detail !== id) return;
-      setCollapsed(false);
-      requestAnimationFrame(() => document.getElementById(`group-${id}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
-    };
-    window.addEventListener(REVEAL_GROUP_EVENT, onReveal);
-    return () => window.removeEventListener(REVEAL_GROUP_EVENT, onReveal);
-  }, [id]);
   if (!title) return <>{children}</>;
   return (
     <>
