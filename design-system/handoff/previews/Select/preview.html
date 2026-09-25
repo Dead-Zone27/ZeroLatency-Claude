@@ -1,15 +1,21 @@
-<!-- @dsCard group="Forms" height=200 -->
+<!-- @dsCard group="Forms" height=220 -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Select — ZeroLatency DS</title>
 <style>html,body{margin:0}body{background:var(--bg);color:var(--text)}</style></head>
 <body class="zl" style="padding:24px">
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;max-width:760px">
-<label class="zl-field"><span class="zl-field-label">When a thread is FYI</span><span class="zl-select"><select><option>Archive and summarize</option><option>Keep in inbox</option><option>Label only</option></select></span></label>
-<label class="zl-field"><span class="zl-field-label">Hover</span><span class="zl-select is-hover"><select><option>Weekdays</option></select></span></label>
-<label class="zl-field"><span class="zl-field-label">Focus-visible</span><span class="zl-select is-focus"><select><option>Every 15 minutes</option></select></span></label>
-<label class="zl-field"><span class="zl-field-label">Invalid</span><span class="zl-select"><select aria-invalid="true"><option>Choose a calendar</option></select></span><span class="zl-field-error"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v5M12 16v.01"/></svg>Pick a calendar for scheduling.</span></label>
-<label class="zl-field"><span class="zl-field-label">Disabled</span><span class="zl-select"><select disabled><option>Team plan only</option></select></span></label>
+<div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+  <div style="display:grid;gap:8px">
+    <p class="zl-section-label" style="margin:0 0 8px">Inline trigger (settings row)</p>
+    <button class="zl-select-trigger" aria-haspopup="listbox" aria-expanded="false">System<svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button>
+    <button class="zl-select-trigger" aria-haspopup="listbox" aria-expanded="true">Side peek<svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button>
+  </div>
+  <div class="zl-menu" style="width:180px" role="listbox" aria-label="Theme">
+    <button class="zl-menu-item" role="option" aria-selected="false">System</button>
+    <button class="zl-menu-item" role="option" aria-selected="false">Light</button>
+    <button class="zl-menu-item" role="option" aria-selected="true">Dark<svg class="zl-icon zl-menu-item-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+  </div>
+  <div class="zl-field" style="width:200px"><label class="zl-field-label" for="s1">Native</label><select id="s1" class="zl-input zl-select"><option>Go to next thread</option><option>Go to previous thread</option><option>Back to list</option></select></div>
 </div>
 </body>
 </html>

@@ -4,15 +4,10 @@
 <head><meta charset="utf-8"><title>Toggle — ZeroLatency DS</title>
 <style>html,body{margin:0}body{background:var(--bg);color:var(--text)}</style></head>
 <body class="zl" style="padding:24px">
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;max-width:760px">
-<span class="zl-toggle-row"><button class="zl-toggle" role="switch" aria-checked="false" aria-label="Auto-archive"></button>Off</span>
-<span class="zl-toggle-row"><button class="zl-toggle" role="switch" aria-checked="true" aria-label="Auto-draft"></button>On — auto-draft replies</span>
-<span class="zl-toggle-row"><button class="zl-toggle is-hover" role="switch" aria-checked="true" aria-label="Hover"></button>Hover</span>
-<span class="zl-toggle-row"><button class="zl-toggle is-focus" role="switch" aria-checked="false" aria-label="Focus"></button>Focus-visible</span>
-<span class="zl-toggle-row"><button class="zl-toggle is-active" role="switch" aria-checked="false" aria-label="Active"></button>Active (pressed)</span>
-<span class="zl-toggle-row"><button class="zl-toggle" role="switch" aria-checked="false" disabled aria-label="Disabled"></button><span style="color:var(--text-disabled)">Disabled</span></span>
-<span class="zl-toggle-row"><button class="zl-toggle" role="switch" aria-checked="true" aria-busy="true" aria-label="Saving"></button>Loading (saving)</span>
+<div style="display:grid;gap:4px;max-width:520px">
+  <div class="zl-setting"><span class="zl-setting-text"><strong>Include on replies and forwards</strong><small>Show your signature in replies and forwards you send.</small></span><button class="zl-toggle" role="switch" aria-checked="true" aria-label="Include on replies and forwards"></button></div>
+  <div class="zl-setting"><span class="zl-setting-text"><strong>Default signature</strong><small>Add “Sent with ZeroLatency” to your emails.</small></span><button class="zl-toggle" role="switch" aria-checked="false" aria-label="Default signature"></button></div>
+  <div class="zl-setting"><span class="zl-setting-text"><strong>Focused</strong><small>Keyboard focus ring.</small></span><button class="zl-toggle is-focus" role="switch" aria-checked="false" aria-label="Focused example"></button></div>
 </div>
-<script>document.querySelectorAll('.zl-toggle:not([disabled])').forEach(function(b){b.addEventListener('click',function(){b.setAttribute('aria-checked',b.getAttribute('aria-checked')!=='true')})});</script>
 </body>
 </html>

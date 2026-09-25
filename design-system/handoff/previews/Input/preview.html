@@ -1,16 +1,14 @@
-<!-- @dsCard group="Forms" height=300 -->
+<!-- @dsCard group="Forms" height=250 -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Input — ZeroLatency DS</title>
 <style>html,body{margin:0}body{background:var(--bg);color:var(--text)}</style></head>
 <body class="zl" style="padding:24px">
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;max-width:760px">
-<label class="zl-field"><span class="zl-field-label">Work email</span><input class="zl-input" type="email" placeholder="you@company.com"><span class="zl-field-hint">We’ll only use it for the waitlist.</span></label>
-<label class="zl-field"><span class="zl-field-label">Hover</span><input class="zl-input is-hover" value="maya@northwind.co"></label>
-<label class="zl-field"><span class="zl-field-label">Focus-visible</span><input class="zl-input is-focus" value="maya@north"></label>
-<label class="zl-field"><span class="zl-field-label">Invalid</span><input class="zl-input" aria-invalid="true" aria-describedby="e1" value="maya@"><span class="zl-field-error" id="e1"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v5M12 16v.01"/></svg>Enter a full email address.</span></label>
-<label class="zl-field"><span class="zl-field-label">Disabled</span><input class="zl-input" disabled value="Connected via Google"></label>
-<div class="zl-field"><span class="zl-field-label">Search (with icon + shortcut)</span><div class="zl-input-wrap"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input class="zl-input" placeholder="Search mail" aria-label="Search mail"><span class="zl-kbd">/</span></div></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:20px 24px">
+  <div class="zl-field"><label class="zl-field-label" for="i1">View name</label><input id="i1" class="zl-input zl-input--lg" value="Needs you"></div>
+  <div class="zl-field"><label class="zl-field-label" for="i2">Filter</label><input id="i2" class="zl-input is-focus" placeholder="Filter by…"></div>
+  <div class="zl-field"><label class="zl-field-label" for="i3">Search</label><span class="zl-input-wrap"><svg class="zl-icon " viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/></svg><input id="i3" class="zl-input" placeholder="Search grouping options…"></span></div>
+  <div class="zl-field"><label class="zl-field-label" for="i4">Property name</label><input id="i4" class="zl-input" value="" aria-invalid="true" aria-describedby="i4e"><span id="i4e" class="zl-field-error">Give the property a name.</span></div>
 </div>
 </body>
 </html>

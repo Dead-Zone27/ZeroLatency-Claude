@@ -1,15 +1,9 @@
-<!-- @dsCard group="Overlays" height=330 -->
+<!-- @dsCard group="Overlays" height=110 -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Toast — ZeroLatency DS</title>
 <style>html,body{margin:0}body{background:var(--bg);color:var(--text)}</style></head>
 <body class="zl" style="padding:24px">
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
-<div class="zl-toast zl-toast--success" role="status"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg><div class="zl-toast-main"><div class="zl-toast-title">Archived 18 threads</div><div class="zl-toast-desc">Newsletters and receipts.</div></div><div class="zl-toast-actions"><button class="zl-btn zl-btn--link zl-btn--sm">Undo</button><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Dismiss"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
-<div class="zl-toast zl-toast--agent" role="status"><span class="zl-spinner" aria-hidden="true"></span><div class="zl-toast-main"><div class="zl-toast-title">Drafting a reply…</div><div class="zl-toast-desc">Loading state for agent work.</div></div></div>
-<div class="zl-toast zl-toast--info" role="status"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.01"/></svg><div class="zl-toast-main"><div class="zl-toast-title">Meeting offered</div><div class="zl-toast-desc">3 slots sent to Jonas Beck.</div></div><div class="zl-toast-actions"><button class="zl-btn zl-btn--ghost zl-btn--icon zl-btn--sm" aria-label="Dismiss"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
-<div class="zl-toast zl-toast--warning" role="status"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.01"/></svg><div class="zl-toast-main"><div class="zl-toast-title">Calendar access expires soon</div><div class="zl-toast-desc">Reconnect to keep scheduling on.</div></div><div class="zl-toast-actions"><button class="zl-btn zl-btn--secondary zl-btn--sm">Reconnect</button></div></div>
-<div class="zl-toast zl-toast--error" role="alert"><svg class="zl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v5M12 16v.01"/></svg><div class="zl-toast-main"><div class="zl-toast-title">Couldn’t send</div><div class="zl-toast-desc">Gmail rejected the attachment size.</div></div><div class="zl-toast-actions"><button class="zl-btn zl-btn--secondary zl-btn--sm">Retry</button></div></div>
-</div>
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px"><div class="zl-toast" role="status"><span class="zl-spinner" aria-hidden="true"></span>Message sending</div><div class="zl-toast" role="status">Archived 3 threads<button>Undo</button></div></div>
 </body>
 </html>

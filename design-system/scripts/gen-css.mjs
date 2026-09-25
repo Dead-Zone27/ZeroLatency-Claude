@@ -19,6 +19,7 @@ for (const [k, v] of Object.entries(t.fontSize)) { statics[`text-${k}`] = v.size
 for (const [k, v] of Object.entries(t.fontWeight)) statics[`font-weight-${k}`] = v;
 for (const [k, v] of Object.entries(t.spacing)) statics[`space-${esc(k)}`] = v;
 for (const [k, v] of Object.entries(t.radius)) statics[`radius-${k}`] = v;
+for (const [k, v] of Object.entries(t.size)) statics[`size-${k}`] = v;
 for (const [k, v] of Object.entries(t.breakpoint)) statics[`breakpoint-${k}`] = v;
 for (const [k, v] of Object.entries(t.motion.duration)) statics[`duration-${k}`] = v;
 for (const [k, v] of Object.entries(t.motion.easing)) statics[`ease-${k}`] = v;
@@ -50,6 +51,7 @@ for (const [k, v] of Object.entries(t.fontSize)) tw += `  --text-${k}: ${v.size}
 for (const [k, v] of Object.entries(t.fontWeight)) tw += `  --font-weight-${k}: ${v};\n`;
 tw += `  --spacing: 4px; /* 4px base: p-4 = 16px, gap-6 = 24px */\n  --radius-*: initial;\n`;
 for (const [k, v] of Object.entries(t.radius)) tw += `  --radius-${k}: ${v};\n`;
+for (const [k, v] of Object.entries(t.size)) tw += `  --size-${k}: ${v};\n`;
 tw += `  --shadow-*: initial; /* use elevation-* utilities below: they read the themed --shadow-* vars */\n`;
 tw += `  --breakpoint-*: initial;\n`;
 for (const [k, v] of Object.entries(t.breakpoint)) tw += `  --breakpoint-${k}: ${v};\n`;
