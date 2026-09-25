@@ -3,6 +3,8 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { updateView, useAccountData, type PropertyDef, type PropertyValue } from '@/lib/client/store';
 import { ALL_HOVER_ACTIONS, type HoverAction } from '@/lib/shared/views';
 import { useThreadGroups } from './use-groups';
+import { HoverPreview } from './HoverPreview';
+import { selectRange } from '@/lib/shared/selection';
 import { formatListDate, participantLabel } from '@/lib/shared/compose';
 import type { Label, ThreadSummary } from '@/lib/shared/types';
 import { Glyph, Icon, StatusDot } from './icons';
@@ -43,6 +45,67 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
   const hover = view?.hoverActions ?? ALL_HOVER_ACTIONS.filter((a) => a !== 'star');
   const allSelected = state.threads.length > 0 && state.threads.every((t) => selected.has(t.id));
 
+  // ---------- selection ----------
+  // Rows in on-screen order (group order), for Shift ranges and drag-selecting.
+  const ordered = groups.flatMap((g) => g.threads.map((t) => t.id));
+  const [anchor, setAnchor] = useState<string | null>(null);
+  const [drag, setDrag] = useState<{ start: number; on: boolean; base: Set<string> } | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!drag) return;
+    const end = () => setDrag(null);
+    // Auto-scroll while dragging near the top or bottom edge of the list.
+    const onMove = (e: PointerEvent) => {
+      const el = scroller.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (e.clientY < r.top + 36) el.scrollTop -= 14;
+      else if (e.clientY > r.bottom - 36) el.scrollTop += 14;
+    };
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    window.addEventListener('pointermove', onMove);
+    return () => { window.removeEventListener('pointerup', end); window.removeEventListener('pointercancel', end); window.removeEventListener('pointermove', onMove); };
+  }, [drag]);
+
+  /** Mouse down on a row's checkbox: toggle it (or a Shift range) and start drag-selecting. */
+  const checkDown = (id: string, shift: boolean) => {
+    const idx = ordered.indexOf(id);
+    const on = !selected.has(id);
+    if (shift && anchor && ordered.includes(anchor)) {
+      setSelected(selectRange(selected, ordered, ordered.indexOf(anchor), idx, on));
+    } else {
+      setSelected(selectRange(selected, ordered, idx, idx, on));
+      setDrag({ start: idx, on, base: new Set(selected) });
+    }
+    setAnchor(id);
+  };
+  /** Pointer moves over a row while drag-selecting: select everything between the start and this row. */
+  const dragOver = (id: string) => {
+    if (!drag) return;
+    setSelected(selectRange(drag.base, ordered, drag.start, ordered.indexOf(id), drag.on));
+  };
+  /** Row click: Shift selects a range, Ctrl/Cmd toggles, otherwise opens the thread. */
+  const rowClick = (id: string, e: React.MouseEvent) => {
+    if (e.shiftKey && (anchor || selected.size)) {
+      e.preventDefault();
+      const from = anchor && ordered.includes(anchor) ? ordered.indexOf(anchor) : ordered.indexOf(openThreadId ?? id);
+      setSelected(selectRange(selected, ordered, from < 0 ? ordered.indexOf(id) : from, ordered.indexOf(id), true));
+      setAnchor(id);
+      return;
+    }
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault();
+      setSelected(selectRange(selected, ordered, ordered.indexOf(id), ordered.indexOf(id), !selected.has(id)));
+      setAnchor(id);
+      return;
+    }
+    openThread(id);
+  };
+
+  // ---------- hover preview ----------
+  const [hoverTarget, setHoverTarget] = useState<{ t: ThreadSummary; rect: DOMRect } | null>(null);
+
   return (
     <section className="zl-listpane" aria-label="Thread list">
       {searchOpen ? <SearchBar onClose={() => setSearchOpen(false)} /> : (
@@ -61,7 +124,7 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
           <div className="zl-banner zl-banner--error" role="alert"><Icon name="important" />{state.error}<button className="zl-btn zl-btn--text zl-btn--sm" style={{ marginLeft: 'auto' }} onClick={onRetry}>Retry</button></div>
         ) : null}
       </div>
-      <div className="zl-scroll">
+      <div className="zl-scroll" ref={scroller} onScroll={() => { if (hoverTarget) setHoverTarget(null); }}>
         {state.loading ? <div className="zl-loadmore" aria-busy="true"><Spinner /></div> : null}
         {!state.loading && !state.error && !state.threads.length ? (
           <div className="zl-empty">
@@ -70,7 +133,7 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
             <span>{nav.kind === 'search' ? 'Try different words or Gmail search operators.' : view ? 'Threads that match this view’s filters will appear here.' : 'This folder is empty.'}</span>
           </div>
         ) : null}
-        <ul className="zl-list" role="listbox" aria-label="Threads" aria-multiselectable="true">
+        <ul className={`zl-list${drag ? ' is-drag-selecting' : ''}${selected.size ? ' has-selection' : ''}`} role="listbox" aria-label="Threads" aria-multiselectable="true">
           {groups.map((g) => (
             <GroupBlock key={g.key} id={g.key} title={g.title} monogram={g.monogram}>
               {g.threads.map((t) => (
@@ -86,8 +149,11 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
                   open={openThreadId === t.id}
                   checked={selected.has(t.id)}
                   isSent={nav.kind === 'folder' && nav.id === 'sent'}
-                  onOpen={() => openThread(t.id)}
-                  onCheck={(v) => { const n = new Set(selected); if (v) n.add(t.id); else n.delete(t.id); setSelected(n); }}
+                  onOpen={(e) => rowClick(t.id, e)}
+                  onCheck={(v) => { setSelected(selectRange(selected, ordered, ordered.indexOf(t.id), ordered.indexOf(t.id), v)); setAnchor(t.id); }}
+                  onCheckDown={(shift) => checkDown(t.id, shift)}
+                  onPointerEnter={() => dragOver(t.id)}
+                  onHover={(rect) => setHoverTarget(rect && !drag ? { t, rect } : null)}
                   act={act}
                 />
               ))}
@@ -97,6 +163,7 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
         <div ref={sentinel} />
         {state.loadingMore ? <div className="zl-loadmore"><Spinner /></div> : null}
       </div>
+      {hoverTarget && hoverTarget.t.id !== openThreadId && !drag ? <HoverPreview key={hoverTarget.t.id} thread={hoverTarget.t} rect={hoverTarget.rect} me={me} /> : null}
     </section>
   );
 }
@@ -320,9 +387,11 @@ function PropertyCell({ def, value }: { def: PropertyDef; value: PropertyValue |
   }
 }
 
-const Row = memo(function Row({ t, me, labels, shown, hover, props, values, open, checked, isSent, onOpen, onCheck, act }: {
+const Row = memo(function Row({ t, me, labels, shown, hover, props, values, open, checked, isSent, onOpen, onCheck, onCheckDown, onPointerEnter, onHover, act }: {
   t: ThreadSummary; me: string; labels: Label[]; shown: string[]; hover: HoverAction[]; props: PropertyDef[]; values?: Record<string, PropertyValue>;
-  open: boolean; checked: boolean; isSent: boolean; onOpen: () => void; onCheck: (v: boolean) => void; act: ReturnType<typeof useMail>['act'];
+  open: boolean; checked: boolean; isSent: boolean; onOpen: (e: React.MouseEvent) => void; onCheck: (v: boolean) => void;
+  onCheckDown: (shift: boolean) => void; onPointerEnter: () => void; onHover: (rect: DOMRect | null) => void;
+  act: ReturnType<typeof useMail>['act'];
 }) {
   const [labelAnchor, setLabelAnchor] = useState<HTMLElement | null>(null);
   const [remindAnchor, setRemindAnchor] = useState<HTMLElement | null>(null);
@@ -352,9 +421,22 @@ const Row = memo(function Row({ t, me, labels, shown, hover, props, values, open
       tabIndex={0}
       data-thread-id={t.id}
       onClick={onOpen}
-      onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) onOpen(); }}
+      onMouseDown={(e) => { if (e.shiftKey) e.preventDefault(); /* no text selection on Shift-click */ }}
+      onPointerEnter={onPointerEnter}
+      onMouseEnter={(e) => onHover(e.currentTarget.getBoundingClientRect())}
+      onMouseLeave={() => onHover(null)}
+      onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) onOpen(e as unknown as React.MouseEvent); }}
     >
-      <Check checked={checked} onChange={onCheck} label={`Select ${t.subject || 'thread'}`} />
+      <span
+        className="zl-row-check"
+        // Mouse: handle the toggle on press so a drag can continue across other rows. Keyboard clicks (detail 0)
+        // still go through the checkbox's own change handler.
+        onPointerDown={(e) => { if (e.pointerType === 'mouse' && e.button === 0) { e.preventDefault(); onCheckDown(e.shiftKey); } }}
+        onClickCapture={(e) => { if (e.detail !== 0 && (e.nativeEvent as PointerEvent).pointerType !== 'touch') { e.preventDefault(); e.stopPropagation(); } }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Check checked={checked} onChange={onCheck} label={`Select ${t.subject || 'thread'}`} />
+      </span>
       <span className="zl-row-dot" aria-label={t.unread ? 'Unread' : undefined} />
       {has('from') ? (
         <span className="zl-row-from">

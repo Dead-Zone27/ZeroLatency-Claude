@@ -86,3 +86,14 @@ describe('groupThreads', () => {
     expect(g.map((x) => x.title)).toEqual(['Finance', 'No label']);
   });
 });
+
+describe('selectRange', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e'];
+  it('adds or removes an inclusive range in either direction, keeping the rest', async () => {
+    const { selectRange } = await import('@/lib/shared/selection');
+    expect([...selectRange(new Set(['e']), ids, 1, 3, true)].sort()).toEqual(['b', 'c', 'd', 'e']);
+    expect([...selectRange(new Set(ids), ids, 3, 1, false)].sort()).toEqual(['a', 'e']);
+    expect([...selectRange(new Set(), ids, 2, 2, true)]).toEqual(['c']);
+    expect([...selectRange(new Set(), ids, -3, 99, true)]).toHaveLength(5);
+  });
+});

@@ -10,6 +10,7 @@ import { IconButton, Popover, Spinner, useToast } from './ui';
 import { useMail, type ComposeInit } from './mail-context';
 import { RecipientField } from './RecipientField';
 import { SchedulePicker } from './SchedulePicker';
+import { rankSlash, slashQuery, type SlashCommand } from '@/lib/shared/slash';
 
 const MAX_TOTAL_BYTES = 24 * 1024 * 1024;
 
@@ -21,7 +22,21 @@ function loadSendAs(): Promise<SendAs[]> {
 
 interface LocalFile { id: string; name: string; type: string; size: number; data: string | null; loading: boolean }
 
-interface SlashItem { key: string; label: string; icon: string; hint?: string }
+type SlashItem = SlashCommand;
+
+/** AI presets that rewrite the current draft. */
+const AI_PRESETS: { key: string; label: string; prompt: string; keywords: string[] }[] = [
+  { key: 'improve', label: 'Improve writing', prompt: 'Improve the writing of this draft: clearer and more natural, same meaning, tone and language. Return the full edited draft.', keywords: ['rewrite', 'polish', 'better'] },
+  { key: 'fix', label: 'Fix spelling & grammar', prompt: 'Fix spelling, grammar and punctuation in this draft. Change nothing else. Return the full edited draft.', keywords: ['typo', 'grammar', 'spell'] },
+  { key: 'shorter', label: 'Make shorter', prompt: 'Make this draft shorter and more concise without losing anything important. Return the full edited draft.', keywords: ['concise', 'shorten', 'brief'] },
+  { key: 'longer', label: 'Make longer', prompt: 'Expand this draft with a little more detail and context, without inventing facts. Return the full edited draft.', keywords: ['expand', 'elaborate'] },
+  { key: 'formal', label: 'More formal', prompt: 'Rewrite this draft in a more formal, professional tone. Return the full edited draft.', keywords: ['professional', 'tone'] },
+  { key: 'friendly', label: 'More friendly', prompt: 'Rewrite this draft in a warmer, friendlier tone. Return the full edited draft.', keywords: ['casual', 'warm', 'tone'] },
+];
+
+function formatDay(d: Date) {
+  return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
 
 export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => void }) {
   const { me, account, threads, refreshList, refreshCounts, aiEnabled, act } = useMail();
@@ -215,12 +230,13 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
   const [aiResult, setAiResult] = useState<string | null>(null);
   const aiRange = useRef<Range | null>(null);
   const openAi = () => { aiRange.current = saveRange(); setAiOpen(true); setAiResult(null); };
-  const runAi = async (mode: 'write' | 'draft') => {
+  const runAi = async (mode: 'write' | 'draft', promptOverride?: string) => {
+    const prompt = promptOverride ?? aiPrompt;
     setAiBusy(true);
     try {
       const r = mode === 'draft' && threadId
-        ? await api.aiDraft(threadId, aiPrompt || undefined)
-        : await api.aiWrite({ prompt: aiPrompt, draft: editor.current ? editorText(editor.current) : '', subject, to: to.map((a) => a.email), threadId: isReply ? threadId : undefined });
+        ? await api.aiDraft(threadId, prompt || undefined)
+        : await api.aiWrite({ prompt, draft: editor.current ? editorText(editor.current) : '', subject, to: to.map((a) => a.email), threadId: isReply ? threadId : undefined });
       setAiResult(r.body);
     } catch (e) {
       push({ message: (e as Error).message, tone: 'error' });
@@ -238,28 +254,81 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
   // ---------- slash menu ----------
   const [slash, setSlash] = useState<{ rect: DOMRect; query: string; index: number } | null>(null);
   const [schedule, setSchedule] = useState<{ range: Range | null; snippet?: string } | null>(null);
+  const subjectInput = useRef<HTMLInputElement>(null);
+  const [hasDraftText, setHasDraftText] = useState(!!init.bodyHtml);
   const slashItems: SlashItem[] = [
-    ...(aiEnabled ? [{ key: 'ai', label: 'Write with AI', icon: 'sparkle', hint: 'Space' }] : []),
-    { key: 'schedule', label: 'Share availability', icon: 'cal' },
-    ...data.snippets.map((s) => ({ key: `snippet:${s.id}`, label: s.name, icon: 'brackets', hint: 'Snippet' })),
-    { key: 'h2', label: 'Heading', icon: 'text', hint: '#' },
-    { key: 'ul', label: 'Bulleted list', icon: 'group', hint: '-' },
-    { key: 'ol', label: 'Numbered list', icon: 'list', hint: '1.' },
-    { key: 'quote', label: 'Quote', icon: 'reply', hint: '>' },
-    { key: 'code', label: 'Code block', icon: 'brackets', hint: '```' },
-    { key: 'hr', label: 'Divider', icon: 'minus', hint: '---' },
+    ...(aiEnabled ? [
+      { key: 'ai', label: 'Write with AI', group: 'AI', icon: 'sparkle', hint: 'Space', keywords: ['ai', 'compose', 'generate'] },
+      ...(isReply && threadId ? [{ key: 'ai:draft', label: 'Draft a reply', group: 'AI', icon: 'reply', keywords: ['respond', 'answer'] }] : []),
+      ...(hasDraftText ? AI_PRESETS.map((p) => ({ key: `ai:${p.key}`, label: p.label, group: 'AI', icon: 'wand', keywords: p.keywords })) : []),
+      ...(hasDraftText ? [{ key: 'ai:translate', label: 'Translate…', group: 'AI', icon: 'wand', keywords: ['language', 'french', 'spanish', 'german'] }] : []),
+    ] : []),
+    { key: 'schedule', label: 'Share availability', group: 'Insert', icon: 'cal', keywords: ['meeting', 'times', 'calendar', 'slots'] },
+    { key: 'today', label: 'Today’s date', group: 'Insert', icon: 'cal', keywords: ['date', 'now'] },
+    { key: 'tomorrow', label: 'Tomorrow’s date', group: 'Insert', icon: 'cal', keywords: ['date'] },
+    { key: 'time', label: 'Current time', group: 'Insert', icon: 'clock', keywords: ['now', 'clock'] },
+    { key: 'link', label: 'Link', group: 'Insert', icon: 'link', hint: '⌘K', keywords: ['url', 'href'] },
+    { key: 'attach', label: 'Attach file', group: 'Insert', icon: 'clip', keywords: ['file', 'upload', 'attachment'] },
+    ...data.snippets.map((sn) => ({ key: `snippet:${sn.id}`, label: sn.name, group: 'Snippets', icon: 'brackets', keywords: ['snippet', 'template'] })),
+    { key: 'h2', label: 'Heading', group: 'Format', icon: 'text', hint: '#', keywords: ['title', 'h2'] },
+    { key: 'bold', label: 'Bold', group: 'Format', icon: 'text', hint: '⌘B', keywords: ['strong'] },
+    { key: 'italic', label: 'Italic', group: 'Format', icon: 'text', hint: '⌘I', keywords: ['emphasis'] },
+    { key: 'ul', label: 'Bulleted list', group: 'Format', icon: 'group', hint: '-', keywords: ['bullet', 'ul', 'unordered'] },
+    { key: 'ol', label: 'Numbered list', group: 'Format', icon: 'list', hint: '1.', keywords: ['ordered', 'ol'] },
+    { key: 'quote', label: 'Quote', group: 'Format', icon: 'reply', hint: '>', keywords: ['blockquote', 'cite'] },
+    { key: 'code', label: 'Code block', group: 'Format', icon: 'brackets', hint: '```', keywords: ['pre', 'monospace'] },
+    { key: 'hr', label: 'Divider', group: 'Format', icon: 'minus', hint: '---', keywords: ['line', 'separator', 'rule'] },
+    { key: 'clear', label: 'Clear formatting', group: 'Format', icon: 'x', keywords: ['plain', 'remove'] },
+    ...(!showCc ? [{ key: 'cc', label: 'Add Cc / Bcc', group: 'Message', icon: 'person', keywords: ['copy', 'recipients'] }] : []),
+    { key: 'subject', label: 'Edit subject', group: 'Message', icon: 'pen', keywords: ['title'] },
+    { key: 'save', label: 'Save draft', group: 'Message', icon: 'draft', keywords: ['store'] },
+    { key: 'send', label: 'Send', group: 'Message', icon: 'send', hint: '⌘↵', keywords: ['deliver'] },
   ];
-  const filteredSlash = slash ? slashItems.filter((i) => i.label.toLowerCase().includes(slash.query.toLowerCase())) : [];
+  const ranked = slash ? rankSlash(slashItems, slash.query) : [];
+  // Nothing matches (or a real sentence is being typed): offer to hand the words to AI.
+  const askAi = aiEnabled && slash && slash.query.trim().length > 2
+    ? { item: { key: 'ai:ask', label: `Ask AI: “${slash.query.trim()}”`, group: 'AI', icon: 'sparkle' } as SlashItem, match: null }
+    : null;
+  const filteredSlash = askAi ? [...ranked, askAi] : ranked;
   const runSlash = (item: SlashItem) => {
-    deleteBeforeCaret((slash?.query.length ?? 0) + 1);
+    const query = slash?.query ?? '';
+    deleteBeforeCaret(query.length + 1);
     setSlash(null);
+    const insertText = (text: string) => document.execCommand('insertText', false, text);
     if (item.key === 'ai') openAi();
+    else if (item.key === 'ai:ask') { openAi(); setAiPrompt(query.trim()); void runAi('write', query.trim()); }
+    else if (item.key === 'ai:draft') { openAi(); void runAi('draft', ''); }
+    else if (item.key === 'ai:translate') { openAi(); setAiPrompt('Translate this draft into '); }
+    else if (item.key.startsWith('ai:')) {
+      const preset = AI_PRESETS.find((p) => `ai:${p.key}` === item.key);
+      if (preset) { openAi(); setAiPrompt(preset.label); void runAi('write', preset.prompt); }
+    }
     else if (item.key === 'schedule') setSchedule({ range: saveRange() });
+    else if (item.key === 'today') insertText(formatDay(new Date()));
+    else if (item.key === 'tomorrow') insertText(formatDay(new Date(Date.now() + 86_400_000)));
+    else if (item.key === 'time') insertText(new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
+    else if (item.key === 'link') {
+      const url = window.prompt('Link URL')?.trim();
+      if (url && /^(https?:|mailto:)/i.test(url)) {
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) document.execCommand('createLink', false, url);
+        else document.execCommand('insertHTML', false, `<a href="${escapeHtml(url)}">${escapeHtml(url)}</a>&nbsp;`);
+      }
+    }
+    else if (item.key === 'attach') fileInput.current?.click();
     else if (item.key.startsWith('snippet:')) {
-      const s = data.snippets.find((x) => `snippet:${x.id}` === item.key);
-      if (s?.body.includes('{{availability}}')) setSchedule({ range: saveRange(), snippet: s.body });
-      else if (s) document.execCommand('insertHTML', false, textToHtml(s.body));
-    } else applyBlock(item.key as BlockCommand);
+      const sn = data.snippets.find((x) => `snippet:${x.id}` === item.key);
+      if (sn?.body.includes('{{availability}}')) setSchedule({ range: saveRange(), snippet: sn.body });
+      else if (sn) document.execCommand('insertHTML', false, textToHtml(sn.body));
+    }
+    else if (item.key === 'bold') document.execCommand('bold');
+    else if (item.key === 'italic') document.execCommand('italic');
+    else if (item.key === 'clear') { document.execCommand('removeFormat'); document.execCommand('formatBlock', false, 'p'); }
+    else if (item.key === 'cc') setShowCc(true);
+    else if (item.key === 'subject') subjectInput.current?.focus();
+    else if (item.key === 'save') void saveDraft().then(() => push({ message: 'Draft saved' }));
+    else if (item.key === 'send') { void send(); return; }
+    else applyBlock(item.key as BlockCommand);
     touch();
   };
 
@@ -271,12 +340,13 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
       if (url && /^(https?:|mailto:)/i.test(url.trim())) document.execCommand('createLink', false, url.trim());
       return;
     }
-    if (slash) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setSlash({ ...slash, index: (slash.index + 1) % Math.max(filteredSlash.length, 1) }); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setSlash({ ...slash, index: (slash.index - 1 + filteredSlash.length) % Math.max(filteredSlash.length, 1) }); return; }
-      if (e.key === 'Enter' || e.key === 'Tab') { const item = filteredSlash[slash.index]; if (item) { e.preventDefault(); runSlash(item); } return; }
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setSlash(null); return; }
+    if (slash && filteredSlash.length) {
+      const n = filteredSlash.length;
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSlash({ ...slash, index: (slash.index + 1) % n }); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setSlash({ ...slash, index: (slash.index - 1 + n) % n }); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { const hit = filteredSlash[Math.min(slash.index, n - 1)]; if (hit) { e.preventDefault(); runSlash(hit.item); } return; }
     }
+    if (slash && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setSlash(null); return; }
     if (e.key === ' ' && editor.current) {
       const before = textBeforeCaret(editor.current);
       const md = MARKDOWN.find((m) => m.marker === before);
@@ -290,11 +360,11 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
   const onEditorInput = () => {
     touch();
     if (!editor.current) return;
-    const before = textBeforeCaret(editor.current);
-    const m = /^\/([\w ]{0,24})$/.exec(before);
-    if (m) {
+    setHasDraftText(editor.current.innerText.replace(/(^|\s)\/\S*$/, '').trim().length > 0);
+    const query = slashQuery(textBeforeCaret(editor.current));
+    if (query !== null) {
       const rect = caretRect();
-      if (rect) setSlash((s) => ({ rect, query: m[1]!, index: s && s.query === m[1] ? s.index : 0 }));
+      if (rect) setSlash((cur) => ({ rect, query, index: cur && cur.query === query ? cur.index : 0 }));
     } else if (slash) setSlash(null);
   };
 
@@ -336,7 +406,7 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
         trailing={!showCc ? <button type="button" className="zl-btn zl-btn--text zl-btn--sm" onClick={() => setShowCc(true)}>Cc/Bcc</button> : null} />
       {showCc ? <RecipientField label="Cc" value={cc} onChange={setCc} extra={participants} /> : null}
       {showCc ? <RecipientField label="Bcc" value={bcc} onChange={setBcc} extra={participants} /> : null}
-      <div className="zl-composer-line"><input aria-label="Subject" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
+      <div className="zl-composer-line"><input ref={subjectInput} aria-label="Subject" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
       <div
         ref={editor}
         className="zl-composer-body"
@@ -416,13 +486,31 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
       ) : null}
       {slash && filteredSlash.length ? (
         <Popover anchor={slash.rect} onClose={() => setSlash(null)} label="Commands">
-          <div className="zl-menu" style={{ width: 260 }} onMouseDown={(e) => e.preventDefault()}>
-            <div className="zl-menu-label">Commands</div>
-            {filteredSlash.map((item, i) => (
-              <button key={item.key} className={`zl-menu-item ${i === slash.index ? 'is-hover' : ''}`} onClick={() => runSlash(item)}>
-                <Icon name={item.icon} />{item.label}{item.hint ? <span className="zl-menu-item-hint">{item.hint}</span> : null}
-              </button>
-            ))}
+          <div className="zl-menu zl-slash-menu" role="listbox" aria-label="Commands" onMouseDown={(e) => e.preventDefault()}>
+            {filteredSlash.map(({ item, match }, i) => {
+              const prev = filteredSlash[i - 1];
+              // Group headings only while browsing; a query shows one ranked list.
+              const heading = !slash.query && (!prev || prev.item.group !== item.group) ? item.group : null;
+              const active = i === Math.min(slash.index, filteredSlash.length - 1);
+              return (
+                <div key={item.key} style={{ display: 'contents' }}>
+                  {heading ? <div className="zl-menu-label">{heading}</div> : null}
+                  <button
+                    role="option"
+                    aria-selected={active}
+                    className={`zl-menu-item ${active ? 'is-hover' : ''}`}
+                    ref={active ? (el) => el?.scrollIntoView({ block: 'nearest' }) : undefined}
+                    onMouseMove={() => { if (!active) setSlash({ ...slash, index: i }); }}
+                    onClick={() => runSlash(item)}
+                  >
+                    <Icon name={item.icon} />
+                    <span className="zl-slash-label">{match ? <>{item.label.slice(0, match[0])}<mark>{item.label.slice(match[0], match[1])}</mark>{item.label.slice(match[1])}</> : item.label}</span>
+                    {item.hint ? <span className="zl-menu-item-hint">{item.hint}</span> : slash.query && item.key !== 'ai:ask' ? <span className="zl-menu-item-hint">{item.group}</span> : null}
+                  </button>
+                </div>
+              );
+            })}
+            <div className="zl-slash-foot"><span>↑↓ to navigate</span><span>↵ to select</span><span>esc to close</span></div>
           </div>
         </Popover>
       ) : null}
