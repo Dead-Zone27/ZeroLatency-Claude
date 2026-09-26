@@ -5,6 +5,7 @@ import { ALL_HOVER_ACTIONS, type HoverAction } from '@/lib/shared/views';
 import { useThreadGroups } from './use-groups';
 import { HoverPreview } from './HoverPreview';
 import { selectRange } from '@/lib/shared/selection';
+import { DEFAULT_SHOWN, rowCells, rowTemplate, type RowCell } from '@/lib/shared/row-layout';
 import { formatListDate, participantLabel } from '@/lib/shared/compose';
 import type { Label, ThreadSummary } from '@/lib/shared/types';
 import { Glyph, Icon, StatusDot } from './icons';
@@ -41,7 +42,9 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
     return () => io.disconnect();
   }, [state.next, onLoadMore]);
 
-  const shown = view?.shown ?? ['from', 'subject', 'labels', 'date', 'files'];
+  const shown = view?.shown ?? DEFAULT_SHOWN;
+  const cells = rowCells(shown, props.map((p) => p.id));
+  const template = rowTemplate(cells);
   const hover = view?.hoverActions ?? ALL_HOVER_ACTIONS.filter((a) => a !== 'star');
   const allSelected = state.threads.length > 0 && state.threads.every((t) => selected.has(t.id));
 
@@ -108,18 +111,24 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
 
   return (
     <section className="zl-listpane" aria-label="Thread list">
-      {searchOpen ? <SearchBar onClose={() => setSearchOpen(false)} /> : (
+      {/* While emails are selected, the header row itself becomes the selection toolbar, so the list never moves. */}
+      {searchOpen ? <SearchBar onClose={() => setSearchOpen(false)} /> : selected.size ? (
+        <BulkBar
+          ids={[...selected]}
+          threads={state.threads}
+          allSelected={allSelected}
+          onSelectAll={(v) => setSelected(v ? new Set(state.threads.map((t) => t.id)) : new Set())}
+          onDone={() => setSelected(new Set())}
+        />
+      ) : (
         <ViewHeader
           allSelected={allSelected}
-          someSelected={selected.size > 0 && !allSelected}
+          someSelected={false}
           onSelectAll={(v) => setSelected(v ? new Set(state.threads.map((t) => t.id)) : new Set())}
           onOpenSidebar={onOpenSidebar}
         />
       )}
       <div>
-        {selected.size ? (
-          <BulkBar ids={[...selected]} threads={state.threads} onDone={() => setSelected(new Set())} />
-        ) : null}
         {state.error ? (
           <div className="zl-banner zl-banner--error" role="alert"><Icon name="important" />{state.error}<button className="zl-btn zl-btn--text zl-btn--sm" style={{ marginLeft: 'auto' }} onClick={onRetry}>Retry</button></div>
         ) : null}
@@ -133,7 +142,7 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
             <span>{nav.kind === 'search' ? 'Try different words or Gmail search operators.' : view ? 'Threads that match this view’s filters will appear here.' : 'This folder is empty.'}</span>
           </div>
         ) : null}
-        <ul className={`zl-list${drag ? ' is-drag-selecting' : ''}${selected.size ? ' has-selection' : ''}`} role="listbox" aria-label="Threads" aria-multiselectable="true">
+        <ul style={{ '--row-cols': template } as React.CSSProperties} className={`zl-list${drag ? ' is-drag-selecting' : ''}${selected.size ? ' has-selection' : ''}`} role="listbox" aria-label="Threads" aria-multiselectable="true">
           {groups.map((g) => (
             <GroupBlock key={g.key} id={g.key} title={g.title} monogram={g.monogram}>
               {g.threads.map((t) => (
@@ -143,6 +152,7 @@ export function ListPane({ state, selected, setSelected, onLoadMore, onRetry, se
                   me={me}
                   labels={labels}
                   shown={shown}
+                  cells={cells}
                   hover={hover}
                   props={props}
                   values={data.values[t.id]}
@@ -375,16 +385,22 @@ function SearchBar({ onClose }: { onClose: () => void }) {
   );
 }
 
-function BulkBar({ ids, threads, onDone }: { ids: string[]; threads: ThreadSummary[]; onDone: () => void }) {
+function BulkBar({ ids, threads, allSelected, onSelectAll, onDone }: { ids: string[]; threads: ThreadSummary[]; allSelected: boolean; onSelectAll: (v: boolean) => void; onDone: () => void }) {
   const { act } = useMail();
   const [labelAnchor, setLabelAnchor] = useState<HTMLElement | null>(null);
   const [remindAnchor, setRemindAnchor] = useState<HTMLElement | null>(null);
   const sel = threads.filter((t) => ids.includes(t.id));
   const anyUnread = sel.some((t) => t.unread);
   const run = (a: Parameters<typeof act>[1]) => { void act(ids, a); onDone(); };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !labelAnchor && !remindAnchor) onDone(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [labelAnchor, remindAnchor, onDone]);
   return (
-    <div className="zl-banner" role="toolbar" aria-label="Selected threads">
-      <span>{ids.length} selected</span>
+    <header className="zl-viewbar zl-viewbar--bulk" role="toolbar" aria-label="Selected threads">
+      <Check checked={allSelected} mixed={!allSelected} onChange={onSelectAll} label={allSelected ? 'Clear selection' : 'Select all threads'} />
+      <span className="zl-bulk-count" aria-live="polite">{ids.length} selected</span>
       <div className="zl-bulkbar">
         <IconButton icon="archive" label="Archive" shortcut="E" onClick={() => run({ kind: 'archive' })} />
         <IconButton icon="trash" label="Move to Trash" shortcut="#" onClick={() => run({ kind: 'trash' })} />
@@ -396,7 +412,7 @@ function BulkBar({ ids, threads, onDone }: { ids: string[]; threads: ThreadSumma
       <button className="zl-btn zl-btn--text zl-btn--sm" style={{ marginLeft: 'auto' }} onClick={onDone}>Clear</button>
       {labelAnchor ? <LabelMenu anchor={labelAnchor} threadIds={ids} current={sel.map((t) => t.labelIds)} onClose={() => { setLabelAnchor(null); onDone(); }} /> : null}
       {remindAnchor ? <RemindMenu anchor={remindAnchor} threadIds={ids} onClose={() => { setRemindAnchor(null); onDone(); }} /> : null}
-    </div>
+    </header>
   );
 }
 
@@ -425,8 +441,8 @@ function PropertyCell({ def, value }: { def: PropertyDef; value: PropertyValue |
   }
 }
 
-const Row = memo(function Row({ t, me, labels, shown, hover, props, values, open, checked, isSent, onOpen, onCheck, onCheckDown, onPointerEnter, onHover, act }: {
-  t: ThreadSummary; me: string; labels: Label[]; shown: string[]; hover: HoverAction[]; props: PropertyDef[]; values?: Record<string, PropertyValue>;
+const Row = memo(function Row({ t, me, labels, shown, cells, hover, props, values, open, checked, isSent, onOpen, onCheck, onCheckDown, onPointerEnter, onHover, act }: {
+  t: ThreadSummary; me: string; labels: Label[]; shown: string[]; cells: RowCell[]; hover: HoverAction[]; props: PropertyDef[]; values?: Record<string, PropertyValue>;
   open: boolean; checked: boolean; isSent: boolean; onOpen: (e: React.MouseEvent) => void; onCheck: (v: boolean) => void;
   onCheckDown: (shift: boolean) => void; onPointerEnter: () => void; onHover: (rect: DOMRect | null) => void;
   act: ReturnType<typeof useMail>['act'];
@@ -476,25 +492,46 @@ const Row = memo(function Row({ t, me, labels, shown, hover, props, values, open
         <Check checked={checked} onChange={onCheck} label={`Select ${t.subject || 'thread'}`} />
       </span>
       <span className="zl-row-dot" aria-label={t.unread ? 'Unread' : undefined} />
-      {has('from') ? (
-        <span className="zl-row-from">
-          {sender}{who.count && !isSent ? <span className="zl-row-count">{who.count}</span> : null}
-          {t.hasDraft ? <span className="zl-row-draft">{' '}Draft</span> : null}
-        </span>
-      ) : null}
-      <span className="zl-row-subject">
-        {has('subject') ? (t.subject || '(no subject)') : null}
-        {has('snippet') && t.snippet ? <span className="zl-row-snippet">{has('subject') ? ' · ' : ''}{t.snippet}</span> : null}
-      </span>
-      <span className="zl-row-meta">
-        {customShown.map((p) => <PropertyCell key={p.id} def={p} value={values?.[p.id]} />)}
-        {t.starred ? <Icon name="starFill" className="zl-row-star" /> : null}
-        {has('labels') ? userLabels.slice(0, 2).map((l) => <LabelChip key={l.id} label={l} />) : null}
-        {has('labels') && userLabels.length > 2 ? <span className="zl-tag-more">+{userLabels.length - 2}</span> : null}
-        {has('files') && t.hasCalendar ? <Icon name="cal" /> : null}
-        {has('files') && t.hasAttachment ? <Icon name="clip" /> : null}
-      </span>
-      <span className="zl-row-time">{has('date') ? formatListDate(t.lastDate) : ''}</span>
+      {cells.map((c) => {
+        switch (c) {
+          case 'from':
+            return (
+              <span key={c} className="zl-row-from">
+                {sender}{who.count && !isSent ? <span className="zl-row-count">{who.count}</span> : null}
+                {t.hasDraft ? <span className="zl-row-draft">{' '}Draft</span> : null}
+              </span>
+            );
+          case 'subject':
+            return (
+              <span key={c} className="zl-row-subject">
+                {has('subject') ? (t.subject || '(no subject)') : null}
+                {has('snippet') && t.snippet ? <span className="zl-row-snippet">{has('subject') ? ' · ' : ''}{t.snippet}</span> : null}
+              </span>
+            );
+          case 'labels':
+            return (
+              <span key={c} className="zl-row-meta zl-row-labels">
+                {t.starred && !has('files') ? <Icon name="starFill" className="zl-row-star" /> : null}
+                {userLabels.slice(0, 2).map((l) => <LabelChip key={l.id} label={l} />)}
+                {userLabels.length > 2 ? <span className="zl-tag-more">+{userLabels.length - 2}</span> : null}
+              </span>
+            );
+          case 'files':
+            return (
+              <span key={c} className="zl-row-meta zl-row-files">
+                {t.starred ? <Icon name="starFill" className="zl-row-star" /> : null}
+                {t.hasCalendar ? <Icon name="cal" /> : null}
+                {t.hasAttachment ? <Icon name="clip" /> : null}
+              </span>
+            );
+          case 'date':
+            return <span key={c} className="zl-row-time">{formatListDate(t.lastDate)}</span>;
+          default: {
+            const def = customShown.find((p) => `prop:${p.id}` === c);
+            return <span key={c} className="zl-row-meta zl-row-prop-cell">{def ? <PropertyCell def={def} value={values?.[def.id]} /> : null}</span>;
+          }
+        }
+      })}
       <span className="zl-row-actions" onClick={(e) => e.stopPropagation()}>{hover.map((h) => actions[h])}</span>
       {labelAnchor ? <LabelMenu anchor={labelAnchor} threadIds={[t.id]} current={[t.labelIds]} onClose={() => setLabelAnchor(null)} /> : null}
       {remindAnchor ? <RemindMenu anchor={remindAnchor} threadIds={[t.id]} onClose={() => setRemindAnchor(null)} /> : null}

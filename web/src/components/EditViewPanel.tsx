@@ -55,6 +55,8 @@ export function EditViewPanel({ viewId, step, setStep, onClose }: { viewId: stri
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [groupAnchor, setGroupAnchor] = useState<HTMLElement | null>(null);
   const [propStep, setPropStep] = useState<{ kind: 'add' } | { kind: 'edit'; id: string } | null>(null);
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [dropKey, setDropKey] = useState<string | null>(null);
   if (!view) return null;
   const props = data.properties[view.id] ?? [];
   const set = (fn: (v: View) => View) => updateView(view.id, fn);
@@ -79,19 +81,38 @@ export function EditViewPanel({ viewId, step, setStep, onClose }: { viewId: stri
       [arr[i], arr[j]] = [arr[j]!, arr[i]!];
       return { ...v, shown: arr };
     });
+    const moveTo = (k: string, target: string) => set((v) => {
+      const arr = v.shown.filter((x) => x !== k);
+      const at = arr.indexOf(target);
+      if (at < 0) return v;
+      const from = v.shown.indexOf(k), to = v.shown.indexOf(target);
+      arr.splice(from < to ? at + 1 : at, 0, k);
+      return { ...v, shown: arr };
+    });
     const row = (k: string, isShown: boolean, i: number) => {
       const m = meta(k);
       return (
-        <div key={k} className="zl-panel-row zl-panel-row--prop">
-          {isShown ? (
-            <span style={{ display: 'grid', gap: 0 }}>
-              <button className="zl-btn zl-btn--icon" style={{ height: 12, width: 16 }} aria-label={`Move ${m.label} up`} disabled={i === 0} onClick={() => move(k, -1)}><Icon name="chevUp" size={10} /></button>
-              <button className="zl-btn zl-btn--icon" style={{ height: 12, width: 16 }} aria-label={`Move ${m.label} down`} disabled={i === shown.length - 1} onClick={() => move(k, 1)}><Icon name="chevDown" size={10} /></button>
-            </span>
-          ) : <span style={{ width: 16 }} />}
+        <div
+          key={k}
+          className={`zl-panel-row zl-panel-row--prop${isShown ? ' is-sortable' : ''}${dragKey === k ? ' is-dragging' : ''}${dropKey === k && dragKey !== k ? ' is-drop' : ''}`}
+          draggable={isShown}
+          onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragKey(k); }}
+          onDragOver={(e) => { if (dragKey && isShown) { e.preventDefault(); setDropKey(k); } }}
+          onDragLeave={() => setDropKey((d) => (d === k ? null : d))}
+          onDrop={(e) => { e.preventDefault(); if (dragKey && dragKey !== k) moveTo(dragKey, k); setDragKey(null); setDropKey(null); }}
+          onDragEnd={() => { setDragKey(null); setDropKey(null); }}
+          onKeyDown={(e) => { if (isShown && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); move(k, e.key === 'ArrowUp' ? -1 : 1); } }}
+        >
+          {isShown ? <span className="zl-drag-handle" aria-hidden title="Drag to reorder"><Icon name="drag" /></span> : <span style={{ width: 16 }} />}
           <Icon name={m.icon} />
           <span className="zl-panel-row-text">{m.label}</span>
           <span className="zl-panel-row-end">
+            {isShown ? (
+              <span className="zl-reorder">
+                <IconButton icon="chevUp" label={`Move ${m.label} up`} size="sm" disabled={i === 0} onClick={() => move(k, -1)} />
+                <IconButton icon="chevDown" label={`Move ${m.label} down`} size="sm" disabled={i === shown.length - 1} onClick={() => move(k, 1)} />
+              </span>
+            ) : null}
             <IconButton icon={isShown ? 'eye' : 'eyeOff'} label={isShown ? `Hide ${m.label}` : `Show ${m.label}`} size="sm"
               onClick={() => set((v) => ({ ...v, shown: isShown ? v.shown.filter((x) => x !== k) : [...v.shown, k] }))} />
             {k.startsWith('prop:') ? <IconButton icon="chevRight" label={`Edit ${m.label}`} size="sm" onClick={() => setPropStep({ kind: 'edit', id: k.slice(5) })} /> : null}

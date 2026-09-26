@@ -1,6 +1,7 @@
 'use client';
 import { useSyncExternalStore } from 'react';
 import { uid, type Ink, type View } from '../shared/views';
+import { DEFAULT_SHOWN, LEGACY_DEFAULT_SHOWN } from '../shared/row-layout';
 
 // ---------- Types ----------
 
@@ -23,7 +24,7 @@ export interface Settings {
 }
 
 /** Bump when a default changes and existing saved state should adopt it once. */
-export const DEFAULTS_VERSION = 2;
+export const DEFAULTS_VERSION = 3;
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'light', threadStyle: 'side', autoAdvance: 'next', fontSize: 'large', desktopNotifications: false, composeStyle: 'dock', defaultsVersion: DEFAULTS_VERSION,
@@ -162,8 +163,8 @@ export function initStores(accountId: string) {
   let settings = load(SETTINGS_KEY, DEFAULT_SETTINGS);
   // v2 defaults: start in light mode (previously followed the system theme).
   const settingsVersion = savedVersion(SETTINGS_KEY);
-  if (settingsVersion !== null && settingsVersion < 2) {
-    settings = { ...settings, theme: settings.theme === 'system' ? 'light' : settings.theme, defaultsVersion: DEFAULTS_VERSION };
+  if (settingsVersion !== null && settingsVersion < DEFAULTS_VERSION) {
+    settings = { ...settings, theme: settingsVersion < 2 && settings.theme === 'system' ? 'light' : settings.theme, defaultsVersion: DEFAULTS_VERSION };
     save(SETTINGS_KEY, settings);
   }
   settingsStore.replace(settings);
@@ -171,8 +172,20 @@ export function initStores(accountId: string) {
   let data = load(acctKey(accountId), emptyAccountData());
   // v2 defaults: views group Unread first (previously by date). Views grouped some other way are left alone.
   const dataVersion = savedVersion(acctKey(accountId));
-  if (dataVersion !== null && dataVersion < 2) {
-    data = { ...data, views: data.views.map((v) => (v.groupBy.kind === 'date' ? { ...v, groupBy: { kind: 'unread' } } : v)), defaultsVersion: DEFAULTS_VERSION };
+  if (dataVersion !== null && dataVersion < DEFAULTS_VERSION) {
+    const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+    data = {
+      ...data,
+      views: data.views.map((v) => {
+        let next = v;
+        // v2: views group Unread first (previously by date). Views grouped some other way are left alone.
+        if (dataVersion < 2 && next.groupBy.kind === 'date') next = { ...next, groupBy: { kind: 'unread' } };
+        // v3: columns follow the property order; the untouched old default listed Files after Date.
+        if (dataVersion < 3 && same(next.shown, LEGACY_DEFAULT_SHOWN)) next = { ...next, shown: [...DEFAULT_SHOWN] };
+        return next;
+      }),
+      defaultsVersion: DEFAULTS_VERSION,
+    };
     save(acctKey(accountId), data);
   }
   accountStore.replace(data);

@@ -136,26 +136,59 @@ function RuleEditor({ rule, onBack, onSave, onDelete }: { rule: FilterRule; onBa
   const def = FIELDS.find((f) => f.field === r.field)!;
   const ref = useRef<HTMLDivElement>(null);
   useMenuKeys(ref);
-  const opLabel = 'op' in r ? ({ is: 'is', isNot: 'is not', contains: 'contains', notContains: 'does not contain', newerThan: 'newer than', olderThan: 'older than', after: 'after', before: 'before' } as Record<string, string>)[r.op] : r.field === 'read' ? 'is' : '';
-  const cycleOp = () => {
+  const OP_LABEL: Record<string, string> = { is: 'is', isNot: 'is not', contains: 'contains', notContains: 'does not contain', newerThan: 'newer than', olderThan: 'older than', after: 'after', before: 'before' };
+  const ops: string[] = !('op' in r) ? [] : r.field === 'date' ? ['newerThan', 'olderThan', 'after', 'before'] : r.op === 'is' || r.op === 'isNot' ? ['is', 'isNot'] : ['contains', 'notContains'];
+  const setOp = (op: string) => {
     setR((x) => {
-      if (!('op' in x)) return x;
+      if (!('op' in x) || x.op === op) return x;
       if (x.field === 'date') {
-        const order = ['newerThan', 'olderThan', 'after', 'before'] as const;
-        const next = order[(order.indexOf(x.op) + 1) % order.length]!;
-        const value = next === 'after' || next === 'before' ? new Date().toISOString().slice(0, 10) : '7d';
-        return { ...x, op: next, value };
+        const dated = op === 'after' || op === 'before';
+        const wasDated = x.op === 'after' || x.op === 'before';
+        // Keep the value when it still fits (a date for after/before, a period for newer/older).
+        const value = dated === wasDated ? x.value : dated ? new Date().toISOString().slice(0, 10) : '7d';
+        return { ...x, op: op as typeof x.op, value };
       }
-      if (x.op === 'is' || x.op === 'isNot') return { ...x, op: x.op === 'is' ? 'isNot' : 'is' } as FilterRule;
-      return { ...x, op: x.op === 'contains' ? 'notContains' : 'contains' } as FilterRule;
+      return { ...x, op } as FilterRule;
     });
+    setOpOpen(false);
   };
+  const [opOpen, setOpOpen] = useState(false);
+  const opWrap = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!opOpen) return;
+    const onDown = (e: PointerEvent) => { if (!opWrap.current?.contains(e.target as Node)) setOpOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setOpOpen(false); } };
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => { document.removeEventListener('pointerdown', onDown, true); document.removeEventListener('keydown', onKey, true); };
+  }, [opOpen]);
+  const current = 'op' in r ? r.op : null;
+  // Two choices: a segmented toggle. More than two: a dropdown.
+  const opControl = !current ? (r.field === 'read' ? <span className="zl-op-static">is</span> : null)
+    : ops.length === 2 ? (
+      <span className="zl-seg" role="radiogroup" aria-label="Condition">
+        {ops.map((o) => <button key={o} type="button" role="radio" aria-checked={o === current} className={o === current ? 'is-on' : ''} onClick={() => setOp(o)}>{OP_LABEL[o]}</button>)}
+      </span>
+    ) : (
+      <span className="zl-op-dropdown" ref={opWrap}>
+        <button type="button" className="zl-btn zl-btn--text zl-btn--sm" aria-haspopup="listbox" aria-expanded={opOpen} aria-label={`Condition: ${OP_LABEL[current]}`} onClick={() => setOpOpen((o) => !o)}>{OP_LABEL[current]}<Icon name="chevDown" size={12} /></button>
+        {opOpen ? (
+          <div className="zl-menu zl-op-menu" role="listbox" aria-label="Condition">
+            {ops.map((o) => (
+              <button key={o} type="button" role="option" aria-selected={o === current} className="zl-menu-item" autoFocus={o === current} onClick={() => setOp(o)}>
+                {OP_LABEL[o]}{o === current ? <Icon name="check" className="zl-menu-item-check" /> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </span>
+    );
   return (
     <div className="zl-menu zl-menu--wide" ref={ref}>
       <div className="zl-menu-title">
         <button className="zl-btn zl-btn--icon zl-btn--sm" aria-label="Back" onClick={onBack}><Icon name="back" /></button>
         <span>{def.label}</span>
-        {opLabel ? <button className="zl-btn zl-btn--text zl-btn--sm" onClick={cycleOp} aria-label="Change condition">{opLabel}<Icon name="chevDown" size={12} /></button> : null}
+        {opControl}
         <button className="zl-btn zl-btn--icon zl-btn--sm" aria-label="Delete filter" onClick={onDelete}><Icon name="trash" /></button>
       </div>
       <RuleBody r={r} setR={setR} />
