@@ -132,40 +132,77 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
   }, [to, cc, bcc, subject, files, src, init.mode, threadId, includeSignature, signature, tagline]);
 
   // ---------- draft autosave ----------
+  // A composer the user hasn't touched is the "default" one and is never saved: opening compose, a reply or a
+  // prefilled quick reply doesn't create a Gmail draft. The first real edit makes it a draft; clearing it back to
+  // empty deletes that draft again, so there is at most one untouched composer and no empty drafts pile up.
   const draftIdRef = useRef<string | null>(init.draftId ?? null);
+  const edited = useRef(false);
+  const savedHere = useRef(false);
+  const finished = useRef(false);
   const hasContent = useCallback(() => {
-    const body = editor.current ? editorText(editor.current) : '';
-    return !!body || files.length > 0 || (init.mode === 'new' && (to.length > 0 || !!subject.trim())) || init.mode === 'draft';
-  }, [files.length, init.mode, to.length, subject]);
-  const saveDraft = useCallback(() => {
+    const body = editor.current ? editorText(editor.current).trim() : '';
+    const addressed = init.mode === 'new' || init.mode === 'draft' || init.mode === 'forward';
+    return !!body || files.length > 0 || (addressed && (to.length + cc.length + bcc.length > 0 || !!subject.trim()));
+  }, [files.length, init.mode, to.length, cc.length, bcc.length, subject]);
+  /** `explicit`: the user asked to save (Save draft), so an untouched composer is saved too. */
+  const saveDraft = useCallback((explicit = false) => {
+    if (explicit) edited.current = true;
+    if (!edited.current) return Promise.resolve();
     const msg = build();
-    if (!msg || !hasContent()) return Promise.resolve();
-    setStatus('saving');
+    if (!msg) return Promise.resolve();
+    const empty = !hasContent();
+    if (empty && !draftIdRef.current) { dirty.current = false; return Promise.resolve(); }
+    setStatus(empty ? 'idle' : 'saving');
     saveChain.current = saveChain.current.then(async () => {
       try {
-        const r = await api.saveDraft({ ...msg, attachments: [] }, draftIdRef.current);
-        draftIdRef.current = r.draftId;
-        setStatus('saved');
+        if (empty) {
+          // Back to the default, empty state: remove the draft instead of keeping a blank one.
+          const id = draftIdRef.current;
+          draftIdRef.current = null;
+          savedHere.current = false;
+          if (id) { await api.deleteDraft(id); refreshCounts(); }
+          setStatus('idle');
+        } else {
+          const r = await api.saveDraft({ ...msg, attachments: [] }, draftIdRef.current);
+          draftIdRef.current = r.draftId;
+          savedHere.current = true;
+          setStatus('saved');
+        }
         dirty.current = false;
       } catch {
         setStatus('error');
       }
     });
     return saveChain.current;
-  }, [build, hasContent]);
+  }, [build, hasContent, refreshCounts]);
 
   const [tick, setTick] = useState(0);
-  const touch = () => { dirty.current = true; setTick((t) => t + 1); };
+  /** Records a real user edit (typing, recipients, subject, attachments, inserted content). */
+  const touch = () => { edited.current = true; dirty.current = true; setTick((t) => t + 1); };
   useEffect(() => {
     if (!tick) return;
     const t = setTimeout(() => { if (dirty.current) void saveDraft(); }, 2500);
     return () => clearTimeout(t);
   }, [tick, saveDraft]);
-  const mounted = useRef(false);
+
+  // Replaced by another composer (or the page moved on) with unsaved edits: save them before this one goes away.
+  // The editor element may already be detached at unmount, so the latest message is snapshotted after each edit.
+  const snapshot = useRef<{ msg: OutgoingMessage; hasContent: boolean } | null>(null);
   useEffect(() => {
-    if (!mounted.current) { mounted.current = true; return; }
-    dirty.current = true; setTick((t) => t + 1);
-  }, [to, cc, bcc, subject]);
+    if (!tick) return;
+    const msg = build();
+    if (msg) snapshot.current = { msg, hasContent: hasContent() };
+  }, [tick, build, hasContent]);
+  const flushRef = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    flushRef.current = () => {
+      const snap = snapshot.current;
+      if (finished.current || !dirty.current || !edited.current || !snap) return;
+      if (snap.hasContent) void saveChain.current.then(() => api.saveDraft({ ...snap.msg, attachments: [] }, draftIdRef.current)).then(() => refreshCounts()).catch(() => undefined);
+      else if (draftIdRef.current) { const id = draftIdRef.current; void saveChain.current.then(() => api.deleteDraft(id)).then(() => refreshCounts()).catch(() => undefined); }
+    };
+  });
+  useEffect(() => () => flushRef.current(), []);
 
   // ---------- send ----------
   const send = async (andArchive = false) => {
@@ -179,6 +216,7 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
     const toastId = push({ message: 'Message sending', busy: true });
     try {
       await api.send(msg, draftIdRef.current);
+      finished.current = true;
       push({ message: 'Message sent' });
       if (andArchive && threadId) await act([threadId], { kind: 'archive' }, { silent: true });
       onClose();
@@ -192,6 +230,7 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
   };
 
   const discard = async () => {
+    finished.current = true;
     const id = draftIdRef.current;
     onClose();
     if (id) {
@@ -203,9 +242,10 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
   };
 
   const close = async () => {
-    if (dirty.current && (editor.current?.innerText.trim() || to.length || subject)) await saveDraft();
+    if (dirty.current) await saveDraft();
+    finished.current = true;
     onClose();
-    if (draftIdRef.current) { push({ message: 'Draft saved' }); refreshCounts(); }
+    if (savedHere.current && draftIdRef.current) { push({ message: 'Draft saved' }); refreshCounts(); }
   };
 
   // ---------- attachments ----------
@@ -326,7 +366,7 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
     else if (item.key === 'clear') { document.execCommand('removeFormat'); document.execCommand('formatBlock', false, 'p'); }
     else if (item.key === 'cc') setShowCc(true);
     else if (item.key === 'subject') subjectInput.current?.focus();
-    else if (item.key === 'save') void saveDraft().then(() => push({ message: 'Draft saved' }));
+    else if (item.key === 'save') void saveDraft(true).then(() => push({ message: 'Draft saved' }));
     else if (item.key === 'send') { void send(); return; }
     else applyBlock(item.key as BlockCommand);
     touch();
@@ -402,11 +442,11 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
         {!init.inline ? <IconButton icon="chevDown" label="Minimise" size="sm" onClick={() => setMinimized(true)} /> : null}
         <IconButton icon="x" label="Close" size="sm" onClick={close} />
       </div>
-      <RecipientField label="To" value={to} onChange={setTo} extra={participants} autoFocus={init.mode === 'new' || init.mode === 'forward'}
+      <RecipientField label="To" value={to} onChange={(v) => { setTo(v); touch(); }} extra={participants} autoFocus={init.mode === 'new' || init.mode === 'forward'}
         trailing={!showCc ? <button type="button" className="zl-btn zl-btn--text zl-btn--sm" onClick={() => setShowCc(true)}>Cc/Bcc</button> : null} />
-      {showCc ? <RecipientField label="Cc" value={cc} onChange={setCc} extra={participants} /> : null}
-      {showCc ? <RecipientField label="Bcc" value={bcc} onChange={setBcc} extra={participants} /> : null}
-      <div className="zl-composer-line"><input ref={subjectInput} aria-label="Subject" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
+      {showCc ? <RecipientField label="Cc" value={cc} onChange={(v) => { setCc(v); touch(); }} extra={participants} /> : null}
+      {showCc ? <RecipientField label="Bcc" value={bcc} onChange={(v) => { setBcc(v); touch(); }} extra={participants} /> : null}
+      <div className="zl-composer-line"><input ref={subjectInput} aria-label="Subject" placeholder="Subject" value={subject} onChange={(e) => { setSubject(e.target.value); touch(); }} /></div>
       <div
         ref={editor}
         className="zl-composer-body"
@@ -480,7 +520,7 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
           <div className="zl-menu" style={{ width: 220 }}>
             <button className="zl-menu-item" onClick={() => { setSendMenu(null); void send(); }}>Send<span className="zl-menu-item-hint">⌘/Ctrl Enter</span></button>
             {threadId ? <button className="zl-menu-item" onClick={() => { setSendMenu(null); void send(true); }}>Send and archive</button> : null}
-            <button className="zl-menu-item" onClick={() => { setSendMenu(null); void saveDraft().then(() => push({ message: 'Draft saved' })); }}>Save draft</button>
+            <button className="zl-menu-item" onClick={() => { setSendMenu(null); void saveDraft(true).then(() => push({ message: 'Draft saved' })); }}>Save draft</button>
           </div>
         </Popover>
       ) : null}
