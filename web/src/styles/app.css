@@ -449,3 +449,26 @@ a { color: inherit; }
 .zl-reorder { display: inline-flex; gap: 0; opacity: 0; transition: opacity var(--duration-base) var(--ease-standard); }
 .zl-panel-row:hover .zl-reorder, .zl-panel-row:focus-within .zl-reorder { opacity: 1; }
 @media (hover: none) { .zl-drag-handle, .zl-reorder { opacity: 1; } }
+
+/* ---------- Main section as a card, matching the right-side tabs ----------
+   Same 5px inset from the top, rounded top-left corner, hairline border and page colour around it. The header
+   inside is 32px so its centre stays on the shared 22px line with the sidebar and the tab headers. */
+@media (min-width: 1024px) {
+  .zl-app-root { background: var(--bg-sidebar); }
+  .zl-workspace { background: var(--bg-sidebar); }
+  .zl-workspace > .zl-listpane, .zl-workspace > .zl-full {
+    margin-top: 5px; min-height: 0; background: var(--bg);
+    border: 1px solid var(--border); border-right: 0; border-bottom: 0;
+    border-top-left-radius: var(--radius-2xl);
+    box-shadow: -10px 0 28px -18px rgb(0 0 0 / 0.18);
+    overflow: hidden;
+    transition: border-top-right-radius var(--duration-slower) var(--ease-standard);
+  }
+  .zl-workspace > .zl-listpane { grid-template-rows: 32px auto minmax(0, 1fr); }
+  .zl-workspace > .zl-listpane > .zl-viewbar, .zl-workspace > .zl-listpane > .zl-searchbar { height: 32px; }
+  .zl-workspace > .zl-full .zl-peek { grid-template-rows: 32px 1fr; }
+  /* With a tab open the two read as separate cards: the list rounds its other corner too and a small gap shows. */
+  .zl-workspace.has-side > .zl-listpane { border-right: 1px solid var(--border); border-top-right-radius: var(--radius-2xl); }
+  .zl-sidepane { margin-left: 6px; }
+  .zl-compose-full { top: 5px; border-top-left-radius: var(--radius-2xl); border: 1px solid var(--border); border-right: 0; border-bottom: 0; overflow: hidden; }
+}
