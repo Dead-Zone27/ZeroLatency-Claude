@@ -64,6 +64,11 @@ export interface MailCtx {
   openSettings: (section?: string) => void;
   openEditView: (viewId: string, step?: 'root' | 'properties' | 'filters' | 'hover') => void;
   openAutoLabel: (seed?: { name?: string; description?: string }) => void;
+  /** Edit the categories Auto label sorts into. */
+  openCategories: () => void;
+  /** Label every email (newest first, up to a limit) with the enabled categories. */
+  autoLabelAll: () => void;
+  autoLabelAllRunning: boolean;
   counts: Record<string, number>;
   refreshList: () => void;
   refreshCounts: () => void;

@@ -38,7 +38,8 @@ function formatDay(d: Date) {
   return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => void }) {
+/** `variant`: how a non-inline composer is presented (see Settings → Compose style). */
+export function Composer({ init, onClose, variant = 'dock' }: { init: ComposeInit; onClose: () => void; variant?: 'dock' | 'side' | 'center' | 'full' }) {
   const { me, account, threads, refreshList, refreshCounts, aiEnabled, act } = useMail();
   const data = useAccountData();
   const { push } = useToast();
@@ -429,7 +430,7 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
 
   return (
     <div
-      className={`zl-composer ${init.inline ? 'is-inline' : ''} ${dragging ? 'zl-dropzone' : ''}`}
+      className={`zl-composer ${init.inline ? 'is-inline' : `is-${variant}`} ${dragging ? 'zl-dropzone' : ''}`}
       role="dialog"
       aria-label={init.mode === 'new' ? 'New message' : subject || 'Reply'}
       onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setDragging(true); } }}
@@ -439,7 +440,7 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
     >
       <div className="zl-composer-head">
         <span>{account.name}<small>{me}</small></span>
-        {!init.inline ? <IconButton icon="chevDown" label="Minimise" size="sm" onClick={() => setMinimized(true)} /> : null}
+        {!init.inline && variant === 'dock' ? <IconButton icon="chevDown" label="Minimise" size="sm" onClick={() => setMinimized(true)} /> : null}
         <IconButton icon="x" label="Close" size="sm" onClick={close} />
       </div>
       <RecipientField label="To" value={to} onChange={(v) => { setTo(v); touch(); }} extra={participants} autoFocus={init.mode === 'new' || init.mode === 'forward'}
@@ -487,6 +488,7 @@ export function Composer({ init, onClose }: { init: ComposeInit; onClose: () => 
                 onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setAiOpen(false); editor.current?.focus(); } }} />
               {isReply && threadId ? <button type="button" className="zl-btn zl-btn--secondary zl-btn--sm" disabled={aiBusy} onClick={() => runAi('draft')}>Draft reply</button> : null}
               <button type="submit" className="zl-btn zl-btn--primary zl-btn--sm" disabled={aiBusy || !aiPrompt.trim()}>{aiBusy ? <Spinner /> : 'Write'}</button>
+              <IconButton icon="x" label="Close AI" size="sm" onClick={() => { setAiOpen(false); setAiResult(null); setAiPrompt(''); editor.current?.focus(); }} />
             </form>
             {aiResult !== null ? (
               <>

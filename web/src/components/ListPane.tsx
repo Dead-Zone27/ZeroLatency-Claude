@@ -8,7 +8,7 @@ import { selectRange } from '@/lib/shared/selection';
 import { formatListDate, participantLabel } from '@/lib/shared/compose';
 import type { Label, ThreadSummary } from '@/lib/shared/types';
 import { Glyph, Icon, StatusDot } from './icons';
-import { Check, IconButton, Spinner } from './ui';
+import { Check, IconButton, Popover, Spinner, useMenuKeys } from './ui';
 import { FOLDERS, useMail } from './mail-context';
 import { LabelChip, LabelMenu, RemindMenu } from './ThreadMenus';
 import { FilterMenu } from './FilterMenu';
@@ -186,7 +186,8 @@ function GroupBlock({ id, title, monogram, children }: { id: string; title: stri
 }
 
 function ViewHeader({ allSelected, someSelected, onSelectAll, onOpenSidebar }: { allSelected: boolean; someSelected: boolean; onSelectAll: (v: boolean) => void; onOpenSidebar: () => void }) {
-  const { nav, navigate, activeView, refreshList, openEditView, openAutoLabel } = useMail();
+  const { nav, navigate, activeView, refreshList, openEditView, openAutoLabel, openCategories, autoLabelAll, autoLabelAllRunning, aiEnabled } = useMail();
+  const [autoAnchor, setAutoAnchor] = useState<HTMLElement | null>(null);
   const { views } = useAccountData();
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [groupAnchor, setGroupAnchor] = useState<HTMLElement | null>(null);
@@ -220,7 +221,7 @@ function ViewHeader({ allSelected, someSelected, onSelectAll, onOpenSidebar }: {
       <div className="zl-viewbar-tools">
         {activeView ? (
           <>
-            <button className="zl-btn zl-btn--secondary" onClick={() => openAutoLabel()}><Icon name="wand" />Auto label</button>
+            <button className="zl-btn zl-btn--secondary" aria-haspopup="menu" aria-expanded={!!autoAnchor} onClick={(e) => setAutoAnchor(e.currentTarget)}>{autoLabelAllRunning ? <Spinner /> : <Icon name="wand" />}Auto label</button>
             <IconButton icon="filter" label="Filter" shortcut="Ctrl F" pressed={hasFilters} className={hasFilters ? 'is-on' : ''} onClick={(e) => setFilterAnchor(e.currentTarget)} />
             <IconButton icon="group" label="Group by" onClick={(e) => setGroupAnchor(e.currentTarget)} />
             <IconButton icon="gear" label="Edit view" shortcut="Ctrl E" onClick={() => openEditView(activeView.id)} />
@@ -228,10 +229,47 @@ function ViewHeader({ allSelected, someSelected, onSelectAll, onOpenSidebar }: {
         ) : null}
         <IconButton icon="refresh" label="Refresh" onClick={() => { setSpinning(true); refreshList(); setTimeout(() => setSpinning(false), 600); }} className={spinning ? 'is-on' : ''} />
       </div>
+      {autoAnchor ? (
+        <AutoLabelMenu
+          anchor={autoAnchor}
+          onClose={() => setAutoAnchor(null)}
+          running={autoLabelAllRunning}
+          aiEnabled={aiEnabled}
+          onAll={autoLabelAll}
+          onEditCategories={openCategories}
+          onNew={() => openAutoLabel()}
+        />
+      ) : null}
       {filterAnchor && activeView ? <FilterMenu anchor={filterAnchor} view={activeView} onClose={() => setFilterAnchor(null)} /> : null}
       {groupAnchor && activeView ? <GroupByMenu anchor={groupAnchor} view={activeView} onClose={() => setGroupAnchor(null)} /> : null}
       <ViewShortcuts onFilter={() => { const b = document.querySelector<HTMLElement>('[aria-label="Filter"]'); if (b) setFilterAnchor(b); }} onEdit={() => activeView && openEditView(activeView.id)} />
     </header>
+  );
+}
+
+function AutoLabelMenu({ anchor, onClose, running, aiEnabled, onAll, onEditCategories, onNew }: {
+  anchor: HTMLElement; onClose: () => void; running: boolean; aiEnabled: boolean; onAll: () => void; onEditCategories: () => void; onNew: () => void;
+}) {
+  const { autoLabels } = useAccountData();
+  const active = autoLabels.filter((r) => r.enabled);
+  const ref = useRef<HTMLDivElement>(null);
+  useMenuKeys(ref);
+  const run = (fn: () => void) => () => { onClose(); fn(); };
+  return (
+    <Popover anchor={anchor} onClose={onClose} placement="bottom-end" label="Auto label">
+      <div className="zl-menu" ref={ref} role="menu" style={{ width: 300 }}>
+        <div className="zl-menu-split">
+          <button className="zl-menu-item zl-menu-item--2line" role="menuitem" autoFocus disabled={!aiEnabled || running} onClick={run(onAll)}>
+            <Icon name="wand" />
+            <span className="zl-menu-item-text">{running ? 'Auto labelling…' : 'Auto label all'}<small>{active.length ? `Sort every email into ${active.length} categor${active.length === 1 ? 'y' : 'ies'}` : 'Add categories to sort into first'}</small></span>
+          </button>
+          <IconButton icon="pen" label="Edit categories" size="sm" onClick={run(onEditCategories)} />
+        </div>
+        <div className="zl-menu-sep" />
+        <button className="zl-menu-item" role="menuitem" disabled={!aiEnabled} onClick={run(onNew)}><Icon name="plus" />New auto label…</button>
+        {!aiEnabled ? <p className="zl-menu-note">AI is off. Set OPENAI_API_KEY on the server.</p> : null}
+      </div>
+    </Popover>
   );
 }
 

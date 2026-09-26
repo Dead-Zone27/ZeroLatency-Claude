@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { updateAccount, updateSettings, useAccountData, useSettings, type AutoAdvance, type FontSize, type Snippet, type Theme, type ThreadStyle } from '@/lib/client/store';
+import { updateAccount, updateSettings, useAccountData, useSettings, type AutoAdvance, type ComposeStyle, type FontSize, type Snippet, type Theme, type ThreadStyle } from '@/lib/client/store';
 import { uid } from '@/lib/shared/views';
 import type { GmailFilter } from '@/lib/shared/types';
 import { Icon } from './icons';
@@ -102,6 +102,9 @@ function InboxSettings() {
       <Row title="Thread style" desc="Change how open threads are displayed">
         <Choice<ThreadStyle> label="Thread style" value={s.threadStyle} onChange={(threadStyle) => updateSettings({ threadStyle })} options={[{ value: 'side', label: 'Side peek' }, { value: 'center', label: 'Center peek' }, { value: 'full', label: 'Full page' }]} />
       </Row>
+      <Row title="Compose style" desc="Choose where new messages and drafts open">
+        <Choice<ComposeStyle> label="Compose style" value={s.composeStyle} onChange={(composeStyle) => updateSettings({ composeStyle })} options={[{ value: 'dock', label: 'Floating window' }, { value: 'side', label: 'Side peek' }, { value: 'center', label: 'Center peek' }, { value: 'full', label: 'Full page' }]} />
+      </Row>
       <Row title="Auto-advance" desc="Choose where to go after archiving or deleting a thread">
         <Choice<AutoAdvance> label="Auto-advance" value={s.autoAdvance} onChange={(autoAdvance) => updateSettings({ autoAdvance })} options={[{ value: 'next', label: 'Go to next thread' }, { value: 'previous', label: 'Go to previous thread' }, { value: 'list', label: 'Back to the list' }]} />
       </Row>
@@ -113,28 +116,31 @@ function InboxSettings() {
 }
 
 function AISettings() {
-  const { aiEnabled, openAutoLabel, labels } = useMail();
+  const { aiEnabled, openAutoLabel, openCategories, autoLabelAll, autoLabelAllRunning, labels } = useMail();
   const data = useAccountData();
   return (
     <>
       <Row title="AI features" desc={aiEnabled ? 'Write with AI, reply drafts, summaries and auto labels are on.' : 'Set OPENAI_API_KEY on the server to turn on AI features.'}>
         <span className={`zl-tag ${aiEnabled ? 'zl-tag--green' : ''}`}><span>{aiEnabled ? 'Connected' : 'Not configured'}</span></span>
       </Row>
-      <Row title="Auto labels" desc="Describe a label in plain words. New mail that matches is labelled in Gmail automatically.">
-        <button className="zl-btn zl-btn--secondary" disabled={!aiEnabled} onClick={() => openAutoLabel()}><Icon name="plus" />New auto label</button>
+      <Row title="Auto label categories" desc="Describe each category in plain words. New mail that matches is labelled in Gmail automatically.">
+        <span style={{ display: 'flex', gap: 6 }}>
+          <button className="zl-btn zl-btn--secondary" onClick={openCategories}><Icon name="pen" />Edit categories</button>
+          <button className="zl-btn zl-btn--secondary" disabled={!aiEnabled} onClick={() => openAutoLabel()}><Icon name="plus" />New</button>
+        </span>
+      </Row>
+      <Row title="Auto label all" desc="Go through your existing email (newest first, up to 1,000 conversations per run) and label everything that fits a category.">
+        <button className="zl-btn zl-btn--secondary" disabled={!aiEnabled || autoLabelAllRunning || !data.autoLabels.some((r) => r.enabled)} onClick={autoLabelAll}>{autoLabelAllRunning ? <Spinner /> : <Icon name="wand" />}{autoLabelAllRunning ? 'Running…' : 'Auto label all'}</button>
       </Row>
       <div className="zl-list-card">
-        {data.autoLabels.length === 0 ? <p className="zl-field-hint" style={{ margin: 0 }}>No auto labels yet.</p> : null}
+        {data.autoLabels.length === 0 ? <p className="zl-field-hint" style={{ margin: 0 }}>No categories yet.</p> : null}
         {data.autoLabels.map((r) => {
           const missing = !labels.some((l) => l.id === r.labelId);
           return (
             <div key={r.id} className="zl-list-card-row">
               <span className="zl-setting-text"><strong>{r.name}{missing ? ' (Gmail label deleted)' : ''}</strong><small>{r.description}</small><small>{r.keepInInbox ? 'Keeps mail in the inbox' : 'Moves matching mail out of the inbox'}</small></span>
               <Toggle checked={r.enabled && !missing} disabled={missing} label={`Enable ${r.name}`} onChange={(v) => updateAccount((d) => ({ ...d, autoLabels: d.autoLabels.map((x) => (x.id === r.id ? { ...x, enabled: v } : x)) }))} />
-              <button className="zl-btn zl-btn--text zl-btn--sm" onClick={() => {
-                const description = window.prompt('Describe which emails get this label', r.description)?.trim();
-                if (description) updateAccount((d) => ({ ...d, autoLabels: d.autoLabels.map((x) => (x.id === r.id ? { ...x, description } : x)), autoLabelSeen: {} }));
-              }}>Edit</button>
+              <button className="zl-btn zl-btn--text zl-btn--sm" onClick={openCategories}>Edit</button>
               <button className="zl-btn zl-btn--danger zl-btn--sm" onClick={() => { if (window.confirm(`Stop auto labelling “${r.name}”? The Gmail label and labelled mail stay.`)) updateAccount((d) => ({ ...d, autoLabels: d.autoLabels.filter((x) => x.id !== r.id) })); }}>Remove</button>
             </div>
           );

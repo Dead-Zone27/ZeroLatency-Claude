@@ -190,14 +190,14 @@ export function Toggle({ checked, onChange, label, disabled }: { checked: boolea
   return <button type="button" className="zl-toggle" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={() => onChange(!checked)} />;
 }
 
-export function Check({ checked, onChange, label, mixed }: { checked: boolean; onChange: (v: boolean) => void; label?: string; mixed?: boolean }) {
+export function Check({ checked, onChange, label, mixed, visibleLabel }: { checked: boolean; onChange: (v: boolean) => void; label?: string; mixed?: boolean; visibleLabel?: boolean }) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { if (ref.current) ref.current.indeterminate = !!mixed; }, [mixed]);
   return (
     <label className="zl-check" onClick={(e) => e.stopPropagation()}>
       <input ref={ref} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} aria-label={label ?? 'Select'} />
       <span className="zl-check-box"><svg viewBox="0 0 10 10" aria-hidden><path d="M2 5.2 4.1 7.3 8 2.8" /></svg></span>
-      {label ? <span className="zl-visually-hidden">{label}</span> : null}
+      {label ? <span className={visibleLabel ? 'zl-check-label' : 'zl-visually-hidden'}>{label}</span> : null}
     </label>
   );
 }

@@ -17,6 +17,7 @@ import { SettingsModal } from './SettingsModal';
 import { CommandPalette } from './CommandPalette';
 import { Onboarding } from './Onboarding';
 import { AutoLabelDialog } from './AutoLabelDialog';
+import { CategoriesDialog } from './AutoLabelCategories';
 import { useShortcuts } from './shortcuts';
 
 export function MailApp() {
@@ -69,12 +70,13 @@ interface ListState {
 }
 
 type PanelState = { viewId: string; step: 'root' | 'properties' | 'filters' | 'hover' };
-type SideDesc = { kind: 'thread'; threadId: string } | { kind: 'panel'; panel: PanelState } | null;
+type SideDesc = { kind: 'thread'; threadId: string } | { kind: 'panel'; panel: PanelState } | { kind: 'compose'; key: number } | null;
 
 function sameSide(a: SideDesc, b: SideDesc): boolean {
   if (!a || !b) return a === b;
   if (a.kind === 'thread' && b.kind === 'thread') return a.threadId === b.threadId;
   if (a.kind === 'panel' && b.kind === 'panel') return a.panel === b.panel;
+  if (a.kind === 'compose' && b.kind === 'compose') return a.key === b.key;
   return false;
 }
 
@@ -384,16 +386,21 @@ function App({ session }: { session: SessionInfo }) {
   const [floating, setFloating] = useState<(ComposeInit & { key: number }) | null>(null);
   const [inline, setInline] = useState<(ComposeInit & { key: number }) | null>(null);
   const composeSeq = useRef(0);
+  const [panel, setPanel] = useState<PanelState | null>(null);
+  const composeStyle = settings.composeStyle ?? 'dock';
   const compose = useCallback((init: ComposeInit) => {
     const withKey = { ...init, key: ++composeSeq.current };
-    if (init.inline) setInline(withKey); else setFloating(withKey);
-  }, []);
-  const [panel, setPanel] = useState<PanelState | null>(null);
+    if (init.inline) { setInline(withKey); return; }
+    setFloating(withKey);
+    // As a side tab, the composer takes the right-hand slot: whatever was open there closes.
+    if (composeStyle === 'side') { setPanel(null); setOpenThreadId(null); }
+  }, [composeStyle]);
 
   // ---------- right-side tab transitions ----------
   // What the tab shows now, and what it showed before a switch/close, so the old content can fade out while the
   // column resizes and the new content fades in (instead of both snapping at once).
-  const currentSide: SideDesc = openThreadId && settings.threadStyle === 'side' ? { kind: 'thread', threadId: openThreadId } : panel ? { kind: 'panel', panel } : null;
+  const currentSide: SideDesc = floating && composeStyle === 'side' ? { kind: 'compose', key: floating.key }
+    : openThreadId && settings.threadStyle === 'side' ? { kind: 'thread', threadId: openThreadId } : panel ? { kind: 'panel', panel } : null;
   const [shownSide, setShownSide] = useState<SideDesc>(currentSide);
   const [leavingSide, setLeavingSide] = useState<SideDesc>(null);
   if (!sameSide(shownSide, currentSide)) {
@@ -408,6 +415,44 @@ function App({ session }: { session: SessionInfo }) {
   const [settingsOpen, setSettingsOpen] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [autoLabelSeed, setAutoLabelSeed] = useState<{ name?: string; description?: string } | null>(null);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+
+  // ---------- auto label all ----------
+  const AUTO_LABEL_ALL_LIMIT = 1000;
+  const [labelAllRunning, setLabelAllRunning] = useState(false);
+  const stopLabelAll = useRef(false);
+  const autoLabelAll = useCallback(async () => {
+    if (labelAllRunning) return;
+    const rules = accountStore.get().autoLabels.filter((r) => r.enabled && labels.some((l) => l.id === r.labelId));
+    if (!rules.length) { setCategoriesOpen(true); push({ message: 'Add at least one category to auto label with.' }); return; }
+    setLabelAllRunning(true);
+    stopLabelAll.current = false;
+    const stop = { label: 'Stop', run: () => { stopLabelAll.current = true; } };
+    let checked = 0, labelled = 0, token: string | undefined;
+    push({ message: 'Auto labelling your email…', busy: true, action: stop });
+    try {
+      do {
+        const page = await api.threads('-in:spam -in:trash -in:drafts', token, 100);
+        for (let i = 0; i < page.threads.length && !stopLabelAll.current && checked < AUTO_LABEL_ALL_LIMIT; i += 25) {
+          const batch = page.threads.slice(i, i + 25);
+          const r = await api.aiAutoLabel(rules.map((x) => ({ id: x.id, name: x.name, description: x.description, labelId: x.labelId })), batch.map((t) => ({ id: t.id, subject: t.subject, snippet: t.snippet, participants: t.participants })));
+          checked += batch.length;
+          labelled += Object.values(r.assignments).filter((ids) => ids.length).length;
+          updateAccount((d) => ({ ...d, autoLabelSeen: { ...d.autoLabelSeen, ...Object.fromEntries(batch.map((t) => [t.id, t.historyId])) } }));
+          push({ message: `Auto labelling… ${checked} checked, ${labelled} labelled`, busy: true, action: stop });
+        }
+        token = page.nextPageToken ?? undefined;
+      } while (token && !stopLabelAll.current && checked < AUTO_LABEL_ALL_LIMIT);
+      const more = token && checked >= AUTO_LABEL_ALL_LIMIT ? ` (the newest ${AUTO_LABEL_ALL_LIMIT}; run again to continue)` : '';
+      push({ message: `${stopLabelAll.current ? 'Stopped. ' : ''}Labelled ${labelled} of ${checked} conversations${more}.`, duration: 7000 });
+    } catch (e) {
+      push({ message: `Auto label stopped: ${(e as Error).message}`, tone: 'error' });
+    } finally {
+      setLabelAllRunning(false);
+      refreshList();
+      refreshCounts();
+    }
+  }, [labelAllRunning, labels, push, refreshList, refreshCounts]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSidebar, setMobileSidebar] = useState(false);
   useEffect(() => {
@@ -424,17 +469,23 @@ function App({ session }: { session: SessionInfo }) {
   }, [me, push]);
 
   // The right side holds one tab at a time: opening a thread closes the edit-view panel and vice versa.
-  const showThread = useCallback((id: string | null) => { setOpenThreadId(id); if (id) setPanel(null); }, []);
+  const showThread = useCallback((id: string | null) => {
+    setOpenThreadId(id);
+    if (id) { setPanel(null); if (composeStyle === 'side') setFloating(null); }
+  }, [composeStyle]);
   const ctx: MailCtx = {
     session, account, me, labels, userLabels, refreshLabels, ensureLabel, nav, navigate, activeView, query, threads: list.threads,
     act, openThread: showThread, openThreadId, compose,
     openSettings: (s) => setSettingsOpen(s ?? 'inbox'),
-    openEditView: (viewId, step = 'root') => { setPanel({ viewId, step }); if (settings.threadStyle === 'side') setOpenThreadId(null); },
+    openEditView: (viewId, step = 'root') => { setPanel({ viewId, step }); if (settings.threadStyle === 'side') setOpenThreadId(null); if (composeStyle === 'side') setFloating(null); },
     openAutoLabel: (seed) => setAutoLabelSeed(seed ?? {}),
+    openCategories: () => setCategoriesOpen(true),
+    autoLabelAll: () => { void autoLabelAll(); },
+    autoLabelAllRunning: labelAllRunning,
     counts, refreshList, refreshCounts, aiEnabled: session.aiEnabled,
   };
 
-  const anyOverlay = !!settingsOpen || paletteOpen || !!autoLabelSeed;
+  const anyOverlay = !!settingsOpen || paletteOpen || !!autoLabelSeed || categoriesOpen;
   useShortcuts({
     enabled: data.onboarded && !anyOverlay,
     threads: list.threads,
@@ -461,10 +512,9 @@ function App({ session }: { session: SessionInfo }) {
     );
   }
 
-  const peek = openThreadId && settings.threadStyle === 'side';
   const full = openThreadId && settings.threadStyle === 'full';
   const center = openThreadId && settings.threadStyle === 'center';
-  const side: 'thread' | 'panel' | null = peek ? 'thread' : panel ? 'panel' : null;
+  const side: 'thread' | 'panel' | 'compose' | null = currentSide?.kind ?? null;
   const renderThread = (id: string) => (
     <ThreadView
       key={id}
@@ -477,7 +527,9 @@ function App({ session }: { session: SessionInfo }) {
     />
   );
   const threadView = openThreadId ? renderThread(openThreadId) : null;
-  const renderSide = (d: NonNullable<SideDesc>) => d.kind === 'thread'
+  const renderSide = (d: NonNullable<SideDesc>) => d.kind === 'compose'
+    ? (floating && floating.key === d.key ? <Composer key={floating.key} init={floating} variant="side" onClose={() => setFloating(null)} /> : null)
+    : d.kind === 'thread'
     ? renderThread(d.threadId)
     : <EditViewPanel key={d.panel.viewId} viewId={d.panel.viewId} step={d.panel.step} setStep={(step) => setPanel({ ...d.panel, step })} onClose={() => setPanel(null)} />;
   const leaving = leavingSide && leavingSide.kind !== currentSide?.kind ? leavingSide : null;
@@ -502,6 +554,7 @@ function App({ session }: { session: SessionInfo }) {
               onOpenSidebar={() => setMobileSidebar(true)}
             />
           )}
+          {floating && composeStyle === 'full' ? <div className="zl-compose-full"><Composer key={floating.key} init={floating} variant="full" onClose={() => setFloating(null)} /></div> : null}
           {currentSide || leaving ? (
             // One tab card; its content layers cross-fade when switching between a thread and Edit view.
             <aside className={`zl-sidepane${currentSide ? '' : ' is-closing'}`}>
@@ -515,10 +568,12 @@ function App({ session }: { session: SessionInfo }) {
         </div>
       </div>
       {center ? <div className="zl-center-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenThreadId(null); }}>{threadView}</div> : null}
-      {floating ? <div className="zl-composer-dock"><Composer key={floating.key} init={floating} onClose={() => setFloating(null)} /></div> : null}
+      {floating && composeStyle === 'dock' ? <div className="zl-composer-dock"><Composer key={floating.key} init={floating} onClose={() => setFloating(null)} /></div> : null}
+      {floating && composeStyle === 'center' ? <div className="zl-compose-center"><Composer key={floating.key} init={floating} variant="center" onClose={() => setFloating(null)} /></div> : null}
       {settingsOpen ? <SettingsModal section={settingsOpen} setSection={setSettingsOpen} onClose={() => setSettingsOpen(null)} /> : null}
       {paletteOpen ? <CommandPalette onClose={() => setPaletteOpen(false)} openSearch={() => setSearchOpen(true)} /> : null}
       {autoLabelSeed ? <AutoLabelDialog seed={autoLabelSeed} onClose={() => setAutoLabelSeed(null)} /> : null}
+      {categoriesOpen ? <CategoriesDialog onClose={() => setCategoriesOpen(false)} /> : null}
     </MailContext.Provider>
   );
 }

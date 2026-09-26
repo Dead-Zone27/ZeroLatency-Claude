@@ -11,6 +11,7 @@ a { color: inherit; }
 .zl-workspace { --side-w: 0px; grid-template-columns: minmax(0, 1fr) var(--side-w); transition: grid-template-columns 420ms var(--ease-glide); }
 .zl-workspace.has-side--thread { --side-w: min(56%, calc(100% - 420px)); }
 .zl-workspace.has-side--panel { --side-w: var(--size-panel-width); }
+.zl-workspace.has-side--compose { --side-w: min(600px, calc(100% - 420px)); }
 :root { --ease-glide: cubic-bezier(0.22, 1, 0.36, 1); }
 .zl-workspace > .zl-full, .zl-workspace > .zl-listpane { grid-column: 1; grid-row: 1; }
 
@@ -303,6 +304,7 @@ a { color: inherit; }
   .zl-workspace.has-side--thread { --side-w: 100%; }
   .zl-workspace.has-side--thread > .zl-listpane { overflow: hidden; }
   .zl-workspace.has-side--panel { --side-w: 360px; }
+  .zl-workspace.has-side--compose { --side-w: min(520px, calc(100% - 360px)); }
 }
 
 /* Drawer backdrop (tablet and phone): tap outside the sidebar to close it. */
@@ -380,3 +382,32 @@ a { color: inherit; }
 .zl-row .zl-check { visibility: visible; opacity: 0; transition: opacity var(--duration-base) var(--ease-standard); }
 .zl-row:hover .zl-check, .zl-row.is-checked .zl-check, .zl-row:focus-within .zl-check,
 .zl-list.has-selection .zl-check, .zl-list.is-drag-selecting .zl-check { opacity: 1; }
+.zl-delete-labels { display: grid; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface-hover); }
+.zl-check-label { color: var(--text); font-size: var(--text-md); }
+/* Menu row with a trailing icon action (e.g. Auto label all + edit categories). */
+.zl-menu-split { display: flex; align-items: center; gap: 2px; }
+.zl-menu-split > .zl-menu-item { flex: 1; min-width: 0; }
+.zl-menu-split > .zl-btn { flex: none; margin-right: 2px; }
+.zl-menu-note { margin: var(--space-1) var(--space-2) var(--space-1); font-size: var(--text-xs); color: var(--text-subtle); }
+.zl-menu-item:disabled { opacity: 0.5; cursor: default; }
+/* Categories editor */
+.zl-cat-list { display: grid; gap: var(--space-2); max-height: min(46vh, 420px); overflow-y: auto; }
+.zl-cat-row { display: grid; gap: var(--space-1\.5); padding: var(--space-2\.5); border-radius: var(--radius-lg); background: var(--surface-hover); }
+.zl-cat-head { display: flex; align-items: center; gap: var(--space-2); }
+.zl-cat-head .zl-input { flex: 1; min-width: 0; font-weight: 500; }
+.zl-cat-row .zl-textarea { min-height: 52px; resize: vertical; }
+.zl-cat-add { display: flex; flex-wrap: wrap; gap: var(--space-1\.5); }
+
+/* ---------- Compose style: side peek / center peek / full page ---------- */
+.zl-composer.is-side, .zl-composer.is-full { width: 100%; height: 100%; max-width: none; border-radius: 0; box-shadow: none; background: var(--bg); }
+.zl-sidepane-layer > .zl-composer.is-side { min-height: 0; }
+.zl-compose-center { position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; padding: var(--space-8); background: var(--overlay); animation: zl-fade-in var(--duration-slow) var(--ease-enter); }
+.zl-composer.is-center { width: min(760px, 100%); height: min(720px, calc(100dvh - 64px)); box-shadow: var(--shadow-xl); animation: zl-modal-in var(--duration-slower) var(--ease-enter); }
+.zl-workspace { position: relative; }
+.zl-compose-full { position: absolute; inset: 0; z-index: 3; display: grid; background: var(--bg); animation: zl-content-in var(--duration-slow) var(--ease-enter); }
+.zl-compose-full > .zl-composer { max-width: 920px; width: 100%; justify-self: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+@media (max-width: 767px) {
+  .zl-compose-center { padding: 0; }
+  .zl-composer.is-center { width: 100%; height: 100%; border-radius: 0; }
+  .zl-compose-full > .zl-composer { border: 0; }
+}

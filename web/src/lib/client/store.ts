@@ -8,6 +8,8 @@ export type Theme = 'system' | 'light' | 'dark';
 export type ThreadStyle = 'side' | 'center' | 'full';
 export type AutoAdvance = 'next' | 'previous' | 'list';
 export type FontSize = 'default' | 'large';
+/** Where new messages open: floating window (default), right-side tab, centered window or full page. */
+export type ComposeStyle = 'dock' | 'side' | 'center' | 'full';
 
 export interface Settings {
   theme: Theme;
@@ -15,6 +17,7 @@ export interface Settings {
   autoAdvance: AutoAdvance;
   fontSize: FontSize;
   desktopNotifications: boolean;
+  composeStyle: ComposeStyle;
   /** Which revision of the app defaults this saved state has been brought up to (see initStores). */
   defaultsVersion?: number;
 }
@@ -23,7 +26,7 @@ export interface Settings {
 export const DEFAULTS_VERSION = 2;
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'light', threadStyle: 'side', autoAdvance: 'next', fontSize: 'large', desktopNotifications: false, defaultsVersion: DEFAULTS_VERSION,
+  theme: 'light', threadStyle: 'side', autoAdvance: 'next', fontSize: 'large', desktopNotifications: false, composeStyle: 'dock', defaultsVersion: DEFAULTS_VERSION,
 };
 
 export type PropertyType = 'text' | 'number' | 'select' | 'multiSelect' | 'status' | 'date' | 'checkbox' | 'url';

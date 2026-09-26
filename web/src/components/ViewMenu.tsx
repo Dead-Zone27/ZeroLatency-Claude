@@ -1,9 +1,11 @@
 'use client';
-import { useRef } from 'react';
-import { deleteView, duplicateView, useAccountData } from '@/lib/client/store';
+import { useRef, useState } from 'react';
+import { api } from '@/lib/client/api';
+import { deleteView, duplicateView, updateAccount, useAccountData } from '@/lib/client/store';
+import type { Label } from '@/lib/shared/types';
 import type { View } from '@/lib/shared/views';
 import { Icon } from './icons';
-import { Dialog, Popover, useMenuKeys } from './ui';
+import { Check, Dialog, Popover, useMenuKeys, useToast } from './ui';
 import { useMail } from './mail-context';
 
 /** Right-click menu for a view in the sidebar. */
@@ -33,10 +35,43 @@ export function ViewContextMenu({ view, at, onRename, onChangeIcon, onDelete, on
   );
 }
 
-/** Confirms deleting a view. Keeps at least one view so the app always has an inbox to show. */
+/** Gmail labels a view is built on (its "label is" filters and its auto label), excluding ones other views still use. */
+function labelsOwnedBy(view: View, views: View[], labels: Label[], autoLabels: { id: string; labelId: string }[]): Label[] {
+  const named = (v: View) => v.filters.flatMap((f) => (f.field === 'label' && f.op === 'is' ? f.values : [])).map((n) => n.toLowerCase());
+  const mine = new Set(named(view));
+  const auto = view.autoLabelId ? autoLabels.find((r) => r.id === view.autoLabelId) : undefined;
+  const others = new Set(views.filter((v) => v.id !== view.id).flatMap(named));
+  return labels.filter((l) => l.type === 'user' && !l.name.startsWith('ZeroLatency/')
+    && (mine.has(l.name.toLowerCase()) || l.id === auto?.labelId) && !others.has(l.name.toLowerCase()));
+}
+
+/** Confirms deleting a view, and by default the Gmail label(s) it was built on. Keeps at least one view. */
 export function DeleteViewDialog({ view, onClose, onDeleted }: { view: View; onClose: () => void; onDeleted?: () => void }) {
   const data = useAccountData();
+  const { labels, refreshLabels, refreshList, refreshCounts } = useMail();
+  const { push } = useToast();
+  const owned = labelsOwnedBy(view, data.views, labels, data.autoLabels);
+  const [alsoLabels, setAlsoLabels] = useState<Set<string>>(() => new Set(owned.map((l) => l.id)));
+  const [busy, setBusy] = useState(false);
   const last = data.views.length <= 1;
+
+  const remove = async () => {
+    setBusy(true);
+    const ids = owned.filter((l) => alsoLabels.has(l.id)).map((l) => l.id);
+    deleteView(view.id);
+    // Auto labels that would write into a label being deleted go with it.
+    if (ids.length || view.autoLabelId) updateAccount((d) => ({ ...d, autoLabels: d.autoLabels.filter((r) => !ids.includes(r.labelId) && r.id !== view.autoLabelId) }));
+    onClose();
+    onDeleted?.();
+    if (!ids.length) return;
+    const failed: string[] = [];
+    for (const id of ids) await api.deleteLabel(id).catch(() => failed.push(labels.find((l) => l.id === id)?.name ?? id));
+    await refreshLabels().catch(() => undefined);
+    refreshList(); refreshCounts();
+    if (failed.length) push({ message: `View deleted, but Gmail couldn’t delete ${failed.map((n) => `“${n}”`).join(', ')}.`, tone: 'error' });
+    else push({ message: ids.length === 1 ? 'View and Gmail label deleted' : `View and ${ids.length} Gmail labels deleted` });
+  };
+
   return (
     <Dialog
       title="Delete view"
@@ -44,11 +79,25 @@ export function DeleteViewDialog({ view, onClose, onDeleted }: { view: View; onC
       actions={
         <>
           <button className="zl-btn zl-btn--secondary" onClick={onClose}>Cancel</button>
-          <button className="zl-btn zl-btn--danger-solid" disabled={last} onClick={() => { deleteView(view.id); onClose(); onDeleted?.(); }}>Delete</button>
+          <button className="zl-btn zl-btn--danger-solid" disabled={last || busy} onClick={remove}>Delete</button>
         </>
       }
     >
-      <p>{last ? 'This is your only view. Create another view before deleting it.' : <>Delete “{view.name}”? Your email isn’t affected: the view is just a saved filter.</>}</p>
+      <p>{last ? 'This is your only view. Create another view before deleting it.' : <>Delete “{view.name}”?</>}</p>
+      {!last && owned.length ? (
+        <div className="zl-delete-labels">
+          {owned.map((l) => (
+            <Check
+              key={l.id}
+              checked={alsoLabels.has(l.id)}
+              onChange={(v) => setAlsoLabels((cur) => { const n = new Set(cur); if (v) n.add(l.id); else n.delete(l.id); return n; })}
+              label={`Also delete the Gmail label “${l.name}”`}
+              visibleLabel
+            />
+          ))}
+          <p className="zl-field-hint">Emails aren’t deleted, only the label is removed from them.</p>
+        </div>
+      ) : !last ? <p className="zl-field-hint">Your email isn’t affected: the view is just a saved filter.</p> : null}
     </Dialog>
   );
 }
